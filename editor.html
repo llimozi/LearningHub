@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📝 笔记编辑器 · learning</title>
+<style>
+/* v0.5 编辑器: 与仪表盘 v0.4 同套暗色 */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+body{font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--body);line-height:1.6;height:100vh;display:flex;flex-direction:column}
+header{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border)}
+header a{color:var(--accent);text-decoration:none;font-size:13px;font-weight:600}
+header > a{display:inline-block;background:var(--card2);color:var(--body);border:1px solid var(--border2);border-radius:8px;padding:6px 10px}
+header > a:hover{background:var(--border2)}
+#stat a{font-weight:600}
+header input,header button{background:var(--card2);color:var(--body);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-size:13px}
+header button{cursor:pointer}
+header button:hover{background:var(--border2)}
+button.save{background:var(--accent);color:var(--input);font-weight:700}
+button.save:hover{background:var(--accent-hov)}
+#stat{color:var(--dim);font-size:12px;margin-left:auto}
+main{flex:1;display:flex;min-height:0}
+#ed{flex:1;background:var(--bg);color:var(--body);border:none;resize:none;padding:16px;font-family:Consolas,monospace;font-size:14px;line-height:1.7;outline:none;border-right:1px solid var(--border)}
+#pv{flex:1;overflow:auto;padding:16px 20px;font-size:16px;line-height:1.7;letter-spacing:.005em}
+#pv h1,#pv h2,#pv h3,#pv h4{color:var(--text);line-height:1.3}
+#pv h1{font-size:24px;font-weight:700;margin:0 0 12px}
+#pv h2{font-size:20px;font-weight:600;margin:14px 0 8px}
+#pv h3{font-size:18px;font-weight:600;margin:12px 0 6px}
+#pv h4{font-size:16px;font-weight:600;margin:10px 0 6px}
+#pv p{margin:0 0 10px}
+#pv code{background:var(--input);color:var(--warn);padding:1px 5px;border-radius:4px;font-size:13px;font-family:"JetBrains Mono","Cascadia Code","SF Mono",Consolas,monospace}
+#pv pre{background:var(--input);padding:12px 14px;border-radius:8px;overflow:auto;margin:8px 0}
+#pv pre code{background:none;padding:0}
+#pv blockquote{border-left:3px solid var(--accent);padding-left:10px;color:var(--dim);margin:8px 0}
+#pv ul{padding-left:22px;margin:0 0 10px}
+#pv li{margin:2px 0}
+#pv a{color:var(--accent)}
+@media(max-width:768px){ main{flex-direction:column} #ed{border-right:none;border-bottom:1px solid var(--border);height:45%} #pv{flex:1} }
+</style></head>
+<body>
+<header>
+  <a href="/">← 仪表盘</a>
+  <input type="date" id="date">
+  <button onclick="loadNote()">加载</button>
+  <input id="tags" placeholder="标签, 逗号分隔" style="width:180px">
+  <button class="save" onclick="saveNote()">💾 保存到 daily/</button>
+  <span id="stat"></span>
+</header>
+<main>
+  <textarea id="ed" placeholder="# 今天学了什么？&#10;&#10;第一行是标题; 标签会自动写进文件头"></textarea>
+  <div id="pv"></div>
+</main>
+<script>
+/* ===== 极简 Markdown 渲染器(标题/列表/代码块/引用/粗斜体/链接) ===== */
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inline(s){
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/\*(.+?)\*/g,'<i>$1</i>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2" target="_blank">$1</a>');
+}
+var FENCE = /^```/;
+function md(src){
+  var lines = src.split('\n'), out = [], inCode=false, inList=false, inQuote=false;
+  function cl(){ if(inList){ out.push('</ul>'); inList=false; } }
+  function cq(){ if(inQuote){ out.push('</blockquote>'); inQuote=false; } }
+  for(var i=0;i<lines.length;i++){
+    var ln = lines[i], m;
+    if(inCode){
+      if(FENCE.test(ln)){ inCode=false; out.push('</code></pre>'); }
+      else out.push(esc(ln)+'\n');
+      continue;
+    }
+    if(FENCE.test(ln)){ cl(); cq(); inCode=true; out.push('<pre><code>'); continue; }
+    if(m = ln.match(/^(#{1,4})\s+(.*)$/)){ cl(); cq(); out.push('<h'+m[1].length+'>'+inline(m[2])+'</h'+m[1].length+'>'); continue; }
+    if(/^\s*[-*]\s+/.test(ln)){ cq(); if(!inList){ out.push('<ul>'); inList=true; } out.push('<li>'+inline(ln.replace(/^\s*[-*]\s+/,''))+'</li>'); continue; }
+    if(/^>\s?/.test(ln)){ cl(); if(!inQuote){ out.push('<blockquote>'); inQuote=true; } out.push(inline(ln.replace(/^>\s?/,''))+'<br>'); continue; }
+    if(/^\s*$/.test(ln)){ cl(); cq(); continue; }
+    cl(); cq(); out.push('<p>'+inline(ln)+'</p>');
+  }
+  cl(); cq(); if(inCode) out.push('</code></pre>');
+  return out.join('\n');
+}
+/* ===== 编辑/预览/保存/加载 ===== */
+var ed = document.getElementById('ed'), pv = document.getElementById('pv'), stat = document.getElementById('stat');
+var timer = null;
+ed.addEventListener('input', function(){
+  clearTimeout(timer);
+  timer = setTimeout(function(){
+    pv.innerHTML = md(ed.value);
+    stat.textContent = ed.value.replace(/\s/g,'').length + ' 字';
+    stat.style.color = 'var(--dim)';
+  }, 120);
+});
+function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function saveNote(){
+  var date = document.getElementById('date').value || todayStr();
+  var tags = document.getElementById('tags').value.trim();
+  var content = withTags(ed.value, tags);
+  fetch('/api/save_note', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({date:date, content:content, tags:tags})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        stat.textContent = '已保存 daily/'+date+'.md ('+d.words+' 字) · 分析知识点中…';
+        stat.style.color = 'var(--good)';
+        fetch('/api/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({date:date})})
+          .then(function(r){return r.json();})
+          .then(function(a){ if(a.ok){
+            stat.textContent = '已保存并分析 daily/'+date+'.md（知识点 '+a.total+' 天在册） · ';
+            var back = document.createElement('a');
+            back.href = '/';
+            back.textContent = '在仪表盘查看 →';
+            stat.appendChild(back);
+          } });
+      } else {
+        stat.textContent = '保存失败: '+(d.err||'');
+        stat.style.color = 'var(--bad)';
+      }
+    })
+    .catch(function(){ stat.textContent = '服务未运行? 请从仪表盘 bat 进入'; stat.style.color='var(--bad)'; });
+}
+function loadNote(){
+  var date = document.getElementById('date').value || todayStr();
+  fetch('/api/load_note?date='+date)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.exists){
+        ed.value = d.content;
+        var m = d.content.match(/^tags\s*:\s*(.+)$/im);
+        document.getElementById('tags').value = m ? m[1].trim() : '';
+        pv.innerHTML = md(ed.value);
+        stat.textContent = '已加载 '+date+' ('+d.words+' 字)';
+      } else {
+        ed.value = '# ' + date + ' 学习笔记\n\n';
+        document.getElementById('tags').value = '';
+        pv.innerHTML = md(ed.value);
+        stat.textContent = date+' 无笔记, 已新建草稿'; stat.style.color='var(--warn)';
+      }
+    });
+}
+/* 保存时把标签写进文件头(标题行之后), 已有 tags: 行则替换 */
+function withTags(content, tags){
+  var lines = content.split('\n'), out = [], i = 0;
+  if(lines.length && lines[0].startsWith('#')){ out.push(lines[0]); i = 1; }
+  while(i < lines.length){ if(/^tags\s*:/i.test(lines[i])){ i++; continue; } break; }
+  if(tags){ out.push('tags: ' + tags); }
+  return out.concat(lines.slice(i)).join('\n');
+}
+/* ===== v1.3 编辑器键盘流: Ctrl+S 保存 / Ctrl+B 加粗 / Ctrl+I 斜体 ===== */
+document.addEventListener('keydown', function(e){
+  var mod = e.ctrlKey || e.metaKey;
+  if(!mod){ return; }
+  var k = (e.key || '').toLowerCase();
+  if(k === 's'){ e.preventDefault(); saveNote(); }
+  else if(k === 'b' || k === 'i'){
+    e.preventDefault();
+    var m = (k === 'b') ? '**' : '*';
+    var s = ed.selectionStart, e2 = ed.selectionEnd;
+    if(s === e2){ stat.textContent = '先选中文字再按 Ctrl+' + k.toUpperCase(); stat.style.color = 'var(--warn)'; return; }
+    var v = ed.value;
+    ed.value = v.slice(0, s) + m + v.slice(s, e2) + m + v.slice(e2);
+    ed.selectionStart = s; ed.selectionEnd = e2 + m.length * 2;
+    pv.innerHTML = md(ed.value);
+    stat.textContent = '已套用格式，记得 Ctrl+S 保存';
+    stat.style.color = 'var(--warn)';
+  }
+});
+/* 初始化: 默认今天, 支持 ?date= 参数(知识库链接入口) */
+(function(){
+  var q = new URLSearchParams(location.search);
+  document.getElementById('date').value = q.get('date') || todayStr();
+  loadNote();
+})();
+</script>
+</body></html>

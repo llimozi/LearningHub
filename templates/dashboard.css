@@ -1,0 +1,1828 @@
+/* ═══ LAYER MAP (UI-Refactor baseline, 2026-08) ═══
+   L1  v1.5 Base          ~76–278   foundational component styles
+   L2  v2.0 Design System ~279–481  semantic token layer (primary refactoring target)
+   L3  v2.1 Visual Upgrade ~482–829  card/list/button enhancements
+   L4  v2.2 Theme Compat   ~830–885  !important guards — DO NOT MODIFY without Phase5 review
+   ═══════════════════════════════════════════════════ */
+/* ═══ TOKEN MAP (auto-generated, UI-Refactor B1–B4, 2026-08) ═══
+   surface:  --color-bg / surface-raised(=card) / surface-elevated(=card2)
+              / surface-input(=input) / surface-tag(=tag-bg)
+              / surface-hover(=hover) / surface-selected(=hover)
+              / surface-btn-neutral(=#94a3b8) / surface-btn-dimmed(=#585b70)
+   text:     --color-text-primary(=text) / text-muted(=dim) / text-placeholder(=dim)
+              / text-body(=body) / text-on-tag(=pink) / on-accent(=#11111b)
+              / on-btn-dimmed(=#ffffff)
+   border:   --color-border-subtle(=border) / border-strong(=border2)
+   accent:   --color-accent(=accent) / accent-hover(=accent-hov) / nav-active-bg(=accent-dim)
+   state:    --color-state-success(=good) / warning(=warn) / error(=bad)
+             / state-success-soft / warning-soft / error-soft (color-mix 12%)
+   overlay:  --color-overlay-backdrop(rgba(0,0,0,.58))
+   ═══════════════════════════════════════════════════════ */
+/* ===== v1.5 UI 设计令牌(默认暗色) · theme.py 注入的 :root 在本块之后, 可覆盖以下默认值 ===== */
+:root{
+  /* 色板(17 个主题变量, 名称与 theme.py 严格一致) */
+  --bg:#08090A; --card:#0F1011; --card2:#161718; --hover:#1C1D1E; --input:#050607;
+  --border:#1F2022; --border2:#2A2B2E; --body:#D4D4D4; --text:#E8E8E8; --dim:#8B8B8B;
+  --accent:#5E6AD2; --accent-hov:#7B83E8; --good:#4CB782; --bad:#EB5757; --warn:#F2994A;
+  --tag-bg:#1A1B1E; --pink:#B084D9;
+  /* 布局与质感令牌 */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-full:999px;
+  --sh-1:0 1px 3px rgba(0,0,0,.35); --sh-2:0 10px 28px rgba(0,0,0,.38); --sh-3:0 20px 55px rgba(0,0,0,.5);
+  --font:"Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --sbw:234px; --gap:18px; --ease:cubic-bezier(.22,.61,.36,1);
+
+  /* ===== v2.0 设计令牌体系(Linear 式克制) =====
+     颜色类全部为「别名」: 引用上方 17 个主题变量 —— 换主题时令牌同步变色;
+     非颜色类(间距/字号/圆角/阴影/动效)为绝对值, 与主题无关。 */
+  /* 颜色别名层(保留现有视觉, 主题可换) */
+  --bg-elevated: var(--card);          /* 浮起层: 卡片/面板 */
+  --bg-sunken: var(--input);           /* 凹陷层: 输入框/代码块 */
+  --text-muted: var(--dim);            /* 次要文字 */
+  --text-faint: var(--border2);        /* 最弱文字/时间戳 */
+  --ok: var(--good);                   /* 语义成功色 */
+  --color-bg: var(--bg);               /* 语义别名: 页面背景 */
+  --color-surface-raised: var(--card);
+  --color-surface-elevated: var(--card2);
+  --color-border-subtle: var(--border);
+  --color-text-primary: var(--text);
+  --color-text-muted: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hov);
+  --color-state-success: var(--good);
+  --color-state-warning: var(--warn);
+  --color-state-error: var(--bad);
+  --color-state-success-soft: color-mix(in srgb, var(--good) 12%, transparent);
+  --color-state-warning-soft: color-mix(in srgb, var(--warn) 12%, transparent);
+  --color-state-error-soft: color-mix(in srgb, var(--bad) 12%, transparent);
+  --color-surface-input: var(--input);
+  --color-surface-tag: var(--tag-bg);
+  --color-nav-active-bg: var(--accent-dim);
+  --color-text-placeholder: var(--dim);
+  --color-text-on-tag: var(--pink);
+  --color-on-accent: #11111b;          /* accent/success 底上的前景字, 三主题对比度均 >7.7 */
+  --color-text-body: var(--body);       /* 正文默认字色(与 --color-text-primary 区分: 次级语义) */
+  --color-surface-btn-neutral: #94a3b8; /* 低优先级中性按钮背景(批量P3), 三主题固定 */
+  --color-surface-btn-dimmed: #585b70;  /* 弱化/取消按钮背景, 三主题固定 */
+  --color-on-btn-dimmed: #ffffff;       /* 弱化按钮前景(取消文字), 三主题固定 */
+  --color-overlay-backdrop: rgba(0,0,0,.58); /* 浮层遮罩: 中性黑, 三主题统一(原 .ksearch/.guidewrap/.modalwrap 覆盖值) */
+  --color-border-strong: var(--border2); /* 强结构边框: 弹窗/面板边缘 */
+  --color-surface-selected: var(--hover); /* 浮层选中项背景(命令面板/搜索/右键菜单) */
+  --color-surface-hover: var(--hover); /* 通用悬停表面(行/项 hover), 与 selected 同族但语义独立 */
+  --border-subtle: var(--border);      /* 轻分割线 */
+  --accent-dim: rgba(138,180,255,.12); /* 强调色底(仅默认主题微调, 主题层可覆盖) */
+  /* 4px 基线间距 */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+  /* 字体层级 */
+  --font-sans: var(--font);
+  --font-mono: "Cascadia Code","SF Mono",Consolas,monospace;
+  --text-xs: 11px; --text-sm: 12px; --text-base: 14px;
+  --text-lg: 16px; --text-xl: 20px; --text-2xl: 24px;
+  --leading-tight: 1.3; --leading-normal: 1.5; --leading-relaxed: 1.7;
+  /* 圆角语义档(与 --r-* 并存) */
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px;
+  --radius-xl: 14px; --radius-full: 9999px;
+  /* 阴影(暗色用光感层次而非纯黑) */
+  --shadow-sm: var(--sh-1); --shadow-md: var(--sh-2); --shadow-lg: var(--sh-3);
+  --shadow-glow: 0 0 0 1px var(--border), 0 4px 16px rgba(0,0,0,.4);
+  --shadow-focus: 0 0 0 2px var(--accent-dim), 0 0 0 4px rgba(138,180,255,.15);
+  /* 动效时长与缓动 */
+  --ease-out: cubic-bezier(.25,.46,.45,.94);
+  --ease-in-out: cubic-bezier(.3,0,.7,1);
+  --ease-spring: cubic-bezier(.34,1.4,.64,1);
+  --duration-fast: 120ms; --duration-normal: 200ms; --duration-slow: 350ms;
+  /* 布局(与现状对齐: 内容宽沿用 1480, 不改变布局结构) */
+  --topbar-height: 48px; --content-max-width: 1480px;
+}
+/* ================= v1.5 基础层: 全部消费变量, 不写死色值, 换主题零冲突 ================= */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--color-border-strong) transparent}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--color-border-strong);border-radius:var(--r-full)}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+::-webkit-scrollbar-track{background:transparent}
+::selection{background:rgba(138,180,255,.32)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+body{font-family:var(--font);background:var(--color-bg);color:var(--color-text-body);line-height:1.65;font-size:14px;
+  background-image:radial-gradient(1100px 520px at 85% -8%,rgba(138,180,255,.055),transparent 60%),
+                   radial-gradient(900px 480px at -12% 34%,rgba(159,232,164,.04),transparent 62%);
+  background-attachment:fixed}
+a{color:var(--color-accent);text-decoration:none}
+a:hover{color:var(--color-accent-hover)}
+
+/* ---- 应用外壳: 左侧固定导航 + 右侧主栏 ---- */
+.side{position:fixed;top:0;bottom:0;left:0;width:var(--sbw);z-index:30;display:flex;flex-direction:column;
+  background:linear-gradient(180deg,var(--card) 0%,var(--bg) 100%);border-right:1px solid var(--border);
+  padding:20px 14px 16px}
+.brand{display:flex;align-items:center;gap:9px;padding:2px 10px 16px;font-size:17px;color:var(--text)}
+.brand .bsub{margin-left:auto;font-size:10px;color:var(--dim);background:var(--card2);border:1px solid var(--border);
+  padding:1px 8px;border-radius:var(--r-full)}
+.nav{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.nav a{display:flex;align-items:center;gap:9px;padding:8px 11px;border-left:3px solid transparent;border-radius:var(--r-sm);
+  color:var(--color-text-muted);font-size:13px;transition:background .15s var(--ease),color .15s var(--ease)}
+.nav a:hover{background:var(--hover);color:var(--color-text-primary)}
+.nav a.on{background:var(--color-nav-active-bg);color:var(--color-text-primary);border-left-color:var(--color-accent)}
+.ni{font-style:normal;width:19px;text-align:center;font-size:14px}
+.sidefoot{margin-top:auto;padding:12px 10px 2px;border-top:1px dashed var(--border2)}
+.sidefoot .kpi{font-size:20px}
+.main{margin-left:var(--sbw);min-width:0}
+.topbar{position:sticky;top:0;z-index:25;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:13px 28px;background:linear-gradient(180deg,var(--card) 0%,var(--bg) 96%);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:17px;color:var(--color-text-primary)}
+.topbar .sub{font-size:12px;margin-bottom:0}
+.tspacer{flex:1}
+.clock{font-size:12px;color:var(--color-text-muted);background:var(--color-surface-elevated);border:1px solid var(--color-border-subtle);
+  border-radius:var(--r-full);padding:3px 11px;font-variant-numeric:tabular-nums}
+
+/* ---- 内容栅格: 12 列 ---- */
+.dash{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--gap);padding:22px 28px 8px;max-width:1480px;margin:0 auto}
+.s12{grid-column:span 12}.s8{grid-column:span 8}.s6{grid-column:span 6}.s4{grid-column:span 4}
+.dash>.card,.foot details{scroll-margin-top:84px}   /* 侧栏锚点跳转不被吸顶栏遮挡 */
+.dash>.card{margin-bottom:0;animation:fadein .5s var(--ease) both}
+.dash>.card:nth-child(1){animation-delay:.02s}.dash>.card:nth-child(2){animation-delay:.05s}
+.dash>.card:nth-child(3){animation-delay:.08s}.dash>.card:nth-child(4){animation-delay:.11s}
+.dash>.card:nth-child(5){animation-delay:.14s}.dash>.card:nth-child(6){animation-delay:.17s}
+.dash>.card:nth-child(7){animation-delay:.2s}.dash>.card:nth-child(8){animation-delay:.23s}
+.dash>.card:nth-child(n+9){animation-delay:.26s}
+@keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.foot{max-width:1480px;margin:0 auto;padding:6px 28px 28px}
+
+/* ---- 卡片组件 ---- */
+.card{background:var(--color-surface-raised);background-image:linear-gradient(180deg,rgba(255,255,255,.015),transparent 42%);
+  border:1px solid var(--color-border-subtle);border-radius:var(--r-lg);padding:18px 20px;box-shadow:var(--sh-1);
+  transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
+.card:hover{border-color:var(--border2);box-shadow:var(--sh-2)}
+.cardhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.cardhead span{font-size:11px}
+.card h2{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--accent);margin-bottom:12px}
+.card>h2::before,.cardhead h2::before{content:'';display:inline-block;width:4px;height:13px;border-radius:var(--r-full);
+  background:currentColor;margin-right:9px;vertical-align:-1px;opacity:.95}
+.big{font-size:40px;font-weight:700;color:var(--accent);line-height:1.15;font-variant-numeric:tabular-nums}
+.big small{font-size:14px;color:var(--dim);font-weight:400}
+.big.small{font-size:32px;color:var(--good)}
+.sub{color:var(--color-text-muted);font-size:13px}
+.dim{color:var(--color-text-muted);font-size:13px}
+.mt6{margin-top:6px}.mt10{margin-top:10px}.mt14{margin-top:14px}
+
+/* ---- 总览卡: 三栏分区 ---- */
+.ovgrid{display:grid;grid-template-columns:1.35fr auto 1fr auto 1.35fr;gap:24px;align-items:center}
+.ovdiv{width:1px;align-self:stretch;background:var(--color-border-subtle)}
+.ovlab{font-size:11.5px;margin-top:6px}
+.mchain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px}
+.mstep{font-size:11px;color:var(--color-text-muted);background:var(--color-surface-elevated);border:1px solid var(--color-border-subtle);
+  border-radius:var(--r-full);padding:2px 10px;white-space:nowrap}
+.mchain i{color:var(--color-border-strong);font-style:normal}
+.mtag{font-size:11px;color:var(--color-on-accent);background:var(--color-state-warning);border-radius:var(--r-full);padding:2px 10px;font-weight:700}
+
+/* ---- 进度条 / 环形 / 柱状 ---- */
+.bar{background:var(--color-surface-input);border-radius:var(--r-full);height:10px;margin-top:8px;overflow:hidden}
+.fill{height:100%;border-radius:var(--r-full);transition:width .45s var(--ease)}
+/* Phase UI-D Stage2 FIX1: .fill.main 旧渐变定义已删除(蓝+绿横向渐变违背 Quiet Intelligence)。
+   唯一权威定义见 D-7 3B 去权重层的 `.fill.main{background:var(--accent)}`。 */
+.fill.done{background:var(--color-state-success)}.fill.prog{background:var(--color-accent)}.fill.zero{background:var(--color-border-strong)}
+.ringbox{position:relative;width:128px;height:128px}
+.ring{width:128px;height:128px}
+.ringfg{transition:stroke-dashoffset .5s var(--ease)}
+.ringcenter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:var(--text)}
+.bars{display:flex;align-items:flex-end;gap:8px;height:74px;padding:0 2px}
+.bcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bbar{width:100%;max-width:32px;background:linear-gradient(180deg,var(--color-accent),var(--color-accent-hover));
+  border-radius:5px 5px 0 0;min-height:4px;transition:height .4s var(--ease)}
+.blab{font-size:10px;color:var(--color-text-muted);margin-top:4px}
+.planline{margin-top:10px;padding-top:10px;border-top:1px dashed var(--color-border-strong);font-size:13px}
+
+/* ---- 任务行 ---- */
+.task{position:relative;display:block;padding:9px 10px;font-size:14px;border-radius:var(--r-sm);cursor:pointer;
+  transition:background .18s var(--ease),opacity .3s var(--ease),transform .3s var(--ease)}
+.task+.task{margin-top:2px}
+.task:hover{background:var(--hover);transform:translateX(3px)}
+.task input{margin-right:9px;transform:scale(1.12);accent-color:var(--color-accent);vertical-align:-2px}
+.task .txt{position:relative}
+.task.completed{opacity:.55}
+.task.completed .txt{color:var(--color-text-muted)}
+.task.completed .txt::after{content:'';position:absolute;left:0;top:52%;height:2px;background:var(--dim);
+  animation:strike .35s ease forwards}
+@keyframes strike{from{width:0}to{width:100%}}
+.tdetail{display:none;font-size:11px;color:var(--color-text-muted);margin-left:27px;width:100%}
+.tdetail.open{display:block}
+.tag{background:var(--color-surface-tag);color:var(--color-text-on-tag);font-size:11px;padding:1px 8px;border-radius:var(--r-full);
+  margin-left:8px;white-space:nowrap}
+a.rvtag{text-decoration:none;margin:0}
+.rvtag{cursor:pointer;transition:background .15s var(--ease)}
+.rvtag:hover{background:var(--accent);color:var(--color-on-accent)}
+
+/* ---- 推荐行 / 记忆衰减 ---- */
+.rec{display:flex;gap:10px;padding:9px 11px;border:1px solid var(--border);border-left:3px solid var(--border2);
+  border-radius:var(--r-md);margin-bottom:8px;font-size:13px;align-items:baseline;flex-wrap:wrap;
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.rec:hover{background:var(--hover);border-left-color:var(--accent)}
+.ricon{font-size:15px}
+.rcon{color:var(--color-text-primary);font-weight:700}
+.rrsn{color:var(--color-text-muted)}
+.decay{display:flex;align-items:center;gap:9px;padding:4px 0}
+.dname{flex:0 0 118px;font-size:12px;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;text-align:right}
+.dbar{flex:1;background:var(--color-surface-input);border-radius:var(--r-full);height:9px;overflow:hidden}
+.dfill{height:100%;border-radius:var(--r-full);transition:width .4s var(--ease)}
+.dpct{flex:0 0 40px;font-size:12px;color:var(--color-text-muted);font-variant-numeric:tabular-nums}
+
+/* ---- P0-2/3 复习中心: 下个复习 hero + 接下来 ---- */
+.nrh-label{font-size:11px;color:var(--color-text-muted);font-weight:600;letter-spacing:.03em;
+  margin:2px 0 6px;text-transform:uppercase}
+.next-review-hero{margin-bottom:8px}
+.rec.hero{border-left-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);
+  align-items:center}
+.rec.hero .rcon{font-size:15px}
+.upnext-wrap{margin-top:4px;border-top:1px solid var(--color-border-subtle);padding-top:8px}
+.rec.upnext{margin-bottom:6px;padding:7px 10px}
+/* ---- P0-2 记忆保持率全景: 健康分布 ---- */
+.decay-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.dstat{font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r-full)}
+.dstat.green{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.dstat.yellow{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.dstat.red{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+
+/* ---- 表格 / 文本元素 ---- */
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--color-border-subtle);vertical-align:top}
+th{color:var(--color-accent);font-size:11px;letter-spacing:.05em}
+tbody tr:hover td{background:var(--color-surface-hover)}
+/* D-7a Batch 2A: 从 theme.py 覆盖层承接（v1.3 意图: 警告行文字用警告色） */
+tr.warn td{color:var(--warn)}
+code{background:var(--color-surface-input);padding:1px 5px;border-radius:5px;font-size:12px;color:var(--warn) /* code-highlight color, not semantic state — retained as-is */}
+blockquote{border-left:3px solid var(--color-accent);padding:2px 0 2px 10px;color:var(--color-text-muted);font-size:13px;margin:6px 0}
+.li{padding:2px 0;font-size:14px}
+.notice{background:var(--color-surface-tag);color:var(--color-text-on-tag);font-size:12px;padding:7px 11px;border-radius:var(--r-sm);margin-bottom:10px}
+.good{color:var(--color-state-success);font-weight:700}
+.bad{color:var(--color-state-error);font-weight:700}
+.kpi{font-size:24px;font-weight:700;color:var(--color-state-success)}
+
+/* ---- 按钮(统一变体, 替代内联色值) ---- */
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--color-on-accent);border:none;
+  border-radius:10px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px;font-family:inherit;
+  box-shadow:var(--sh-1);transition:transform .1s var(--ease),background .15s var(--ease),filter .15s var(--ease)}
+.btn:hover{background:var(--accent-hov)}
+.btn:active{transform:scale(.96)}
+.btn-good{background:var(--good)}
+.btn-good:hover{filter:brightness(1.12);background:var(--good)}
+.btn-ghost{background:var(--card2);color:var(--body);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--hover)}
+.btn-mini{margin:0;padding:4px 11px;font-size:12px;background:var(--good);border-radius:var(--r-sm)}
+.btn-mini:hover{background:var(--good);filter:brightness(1.08)}
+details{margin-top:12px}
+summary{cursor:pointer;color:var(--accent);font-size:13px;user-select:none}
+.empty{text-align:center;color:var(--color-text-muted);padding:18px 6px}
+.empty svg{width:120px;height:auto;opacity:.9;display:block;margin:0 auto 6px}
+.empty p{font-size:13px}
+#hm svg{display:block}
+
+/* ---- 科目进度行 ---- */
+.subj{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:12px}
+.sname{flex:1;min-width:200px;font-size:14px}
+.spct{color:var(--color-text-muted);font-size:13px;font-variant-numeric:tabular-nums}
+.subj .bar{flex-basis:100%}
+
+/* ---- v1.6 学习洞察面板 ---- */
+.insgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.inscell{min-width:0}
+.inshead{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;flex-wrap:wrap}
+.inshead .dim{font-weight:400}
+.insbig{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+
+/* ---- v1.7 交互增强: 补录 / 减负 / 钻取 ---- */
+.cardtools{display:flex;align-items:center;gap:10px;margin:-4px 0 10px;flex-wrap:wrap}
+.reducemode{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--color-state-warning);
+  border-left-width:4px;background:var(--color-surface-elevated);border-radius:var(--r-md);padding:9px 13px;
+  margin-bottom:12px;font-size:13px}
+body.fatigue .task[data-pri="3"]{display:none}                    /* 减负: P3 视觉折叠(统计口径不变) */
+.redbadge{font-size:12px;font-weight:700;color:var(--color-on-accent);background:var(--color-state-warning);cursor:pointer;
+  border-radius:var(--r-full);padding:3px 12px}
+.decay.krow{cursor:pointer;border-radius:var(--r-sm);padding-right:6px}
+.krow .karrow{flex:0 0 14px;color:var(--color-text-muted);transition:transform .25s var(--ease)}
+.krow.open .karrow{transform:rotate(90deg)}
+.ksub{overflow:hidden;max-height:0;transition:max-height .28s var(--ease);flex-basis:100%}
+.ksub.open{max-height:420px}
+.kline{display:flex;align-items:center;gap:8px;padding:2px 0 2px 24px;font-size:12px}
+.kline .kname{flex:0 0 96px;text-align:right;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kline .kbar{flex:1;height:6px;background:var(--color-surface-input);border-radius:var(--r-full);overflow:hidden}
+.rec.hl{outline:2px solid var(--color-accent);background:var(--color-surface-hover)}   /* 模块A 高亮(D-7 3A: 去冗余权重) */
+.inslink{text-decoration:underline dotted;cursor:pointer}
+.dt-input{margin-top:10px;background:var(--color-surface-input);color:var(--color-text-primary);border:1px solid var(--color-border-strong);
+  border-radius:var(--r-sm);padding:7px 10px;font-size:13px;font-family:inherit;color-scheme:dark}
+#lhtoast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(18px);z-index:130;
+  background:var(--color-surface-raised);border:1px solid var(--color-accent);border-radius:var(--r-full);padding:8px 18px;
+  font-size:13px;color:var(--color-text-primary);opacity:0;pointer-events:none;box-shadow:var(--sh-2);
+  transition:opacity .25s var(--ease),transform .25s var(--ease)}
+#lhtoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Phase3-T01: 撤销按钮版 toast — 覆盖 pointer-events:none 使按钮可点;
+   30s 撤销窗口内可点击, 沿用既有圆角/令牌, 不做全局反馈系统改造 */
+#lhtoast .tmsg{pointer-events:auto}
+/* 含撤销按钮的 toast: 容器整体可点击/可聚焦(普通 toast 的 pointer-events:none 需覆盖) */
+#lhtoast.has-undo{pointer-events:auto}
+#lhtoast .tundo{pointer-events:auto;margin-left:10px;background:var(--color-accent);
+  color:var(--color-on-accent);border:none;border-radius:var(--r-sm);padding:2px 10px;
+  font-size:12px;font-weight:600;cursor:pointer}
+#lhtoast .tundo:hover{filter:brightness(1.1)}
+/* 撤销按钮键盘聚焦环(Phase3-T01): 非 .btn 变体, 需单独补; 与焦点契约同源 */
+#lhtoast .tundo:focus-visible{outline:none;box-shadow:var(--focus-ring) !important}
+
+/* ============================== 
+   v2.0 设计系统层(Linear 式克制)
+   规则: 全部引用 --space/--text/--radius/--shadow/--duration 令牌;
+   追加于样式表末尾 -> 层叠优先级天然高于旧规则, 渐进增强零破坏。
+   ============================== */
+
+/* ---- V2 排版节奏 ---- */
+body{letter-spacing:.01em}
+h1,.topbar h1{font-size:var(--text-base);font-weight:600;line-height:var(--leading-tight)}
+/* D-7a Batch 2A: 从 theme.py 覆盖层承接（v1.3 意图: 标题用文本高亮色；.topbar h1 由上层 .topbar h1 规则覆盖为同值） */
+h1{color:var(--text)}
+.topbar .sub{font-size:var(--text-xs);color:var(--text-faint)}
+.card h2{font-size:var(--text-base);font-weight:600;letter-spacing:.02em;line-height:var(--leading-tight)}
+.big,.kpi,.dpct,.spct,#taskpct,.clock{font-variant-numeric:tabular-nums}
+.tag,.pptag{letter-spacing:.02em;font-weight:500}
+.dim,.sub{line-height:var(--leading-normal)}
+#ksinput,#qc-input{font-size:var(--text-base)}
+.ckitem{font-size:var(--text-sm)}
+.kshint{font-size:var(--text-xs);color:var(--text-faint)}
+.narr .nline{line-height:var(--leading-relaxed)}
+
+/* ---- V3 间距(面板呼吸感) ---- */
+.card{padding:var(--space-5)}
+.dash{gap:var(--space-4);max-width:var(--content-max-width)}
+.ovgrid{gap:var(--space-6)}
+.foot{padding-bottom:var(--space-8)}
+hr,.planline{border-color:var(--border-subtle)}
+.divider,.narr summary{border-color:var(--border-subtle)}
+
+/* ---- V4 微动效(GPU 友好: 只动 transform/opacity) ---- */
+button,.btn,[role="button"],summary{
+  transition:background-color var(--duration-fast) var(--ease-out),
+             border-color var(--duration-fast) var(--ease-out),
+             color var(--duration-fast) var(--ease-out),
+             transform var(--duration-fast) var(--ease-out),
+             box-shadow var(--duration-fast) var(--ease-out)}
+button:active,.btn:active,.btn-mini:active{transform:scale(.97)}
+.card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.cmdkbox{animation:kpop var(--duration-normal) var(--ease-spring)}
+@keyframes kpop{from{opacity:0;transform:scale(.97) translateY(-4px)}to{opacity:1;transform:none}}
+#lhtoast.on{animation:toastin var(--duration-normal) var(--ease-spring)}
+@keyframes toastin{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+:focus-visible{box-shadow:var(--shadow-focus);outline:none;border-radius:var(--radius-sm)}
+.task.completed{transition-duration:var(--duration-normal)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
+    scroll-behavior:auto!important}}
+
+/* ---- V5 组件统一 ---- */
+.btn{padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);
+  font-size:var(--text-sm);font-weight:500}
+.btn-danger{background:transparent;color:var(--color-state-error);border:1px solid var(--color-state-error)}
+.btn-danger:hover{background:rgba(248,81,73,.1);color:var(--bad)}
+.badge{display:inline-flex;align-items:center;padding:2px var(--space-2);
+  border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:500;
+  letter-spacing:.02em;line-height:1.4}
+.badge--ok{background:var(--color-state-success-soft);color:var(--color-state-success)}
+.badge--warn{background:var(--color-state-warning-soft);color:var(--color-state-warning)}
+.badge--bad{background:var(--color-state-error-soft);color:var(--color-state-error)}
+.badge--dim{background:rgba(139,148,158,.1);color:var(--color-text-muted)}
+/* v2.3: 纳入 time 输入与 select 下拉——设置卡表单控件全面接入令牌 */
+input[type=text],input[type=datetime-local],input[type=time],input[type=number],textarea,select{
+  background:var(--color-surface-input);border:1px solid var(--color-border-subtle);border-radius:var(--radius-md);
+  padding:var(--space-2) var(--space-3);font-size:var(--text-base);color:var(--color-text-primary);
+  transition:border-color var(--duration-fast) var(--ease-out),
+             box-shadow var(--duration-fast) var(--ease-out)}
+input[type=text]:focus,input[type=datetime-local]:focus,input[type=time]:focus,input[type=number]:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--color-accent);box-shadow:var(--shadow-focus)}
+/* v2.3: 设置卡里内联在文字流中的小控件收窄, 保持行内排版紧凑 */
+#setcard input[type=time],#setcard input[type=number],#setcard select{
+  padding:1px 6px;font-size:var(--text-sm)}
+divider,hr{border:none;height:1px;background:var(--border-subtle);margin:var(--space-4) 0}
+.empty-state{text-align:center;padding:var(--space-10) var(--space-6);color:var(--text-faint);
+  font-size:var(--text-sm)}
+
+/* ---- V6 层次与氛围 ---- */
+.topbar{min-height:var(--topbar-height);border-bottom-color:var(--color-border-subtle)}
+.cardhead{padding-bottom:var(--space-2);margin-bottom:var(--space-3);
+  border-bottom:1px solid var(--border-subtle)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-faint)}
+::selection{background:rgba(138,180,255,.25);color:var(--text)}
+.kb-focus{outline-offset:-2px;border-radius:var(--radius-sm)}
+/* 今日焦点胶囊(B3): 与顶栏徽章同族的胶囊语言 */
+#daily-focus{padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);
+  font-size:var(--text-sm);font-weight:500;border-width:1.5px;background:transparent}
+#daily-focus.u-high{border-color:var(--color-state-error);color:var(--color-state-error);background:var(--color-state-error-soft)}
+#daily-focus.u-mid{border-color:var(--color-state-warning);color:var(--color-state-warning);background:var(--color-state-warning-soft)}
+#daily-focus.u-low{border-color:var(--color-state-success);color:var(--color-state-success);background:var(--color-state-success-soft)}
+#daily-focus:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+
+/* ---- v1.8 阶段二: 今日焦点 / 排期建议卡 / 叙事周报 ---- */
+.dailyfoc{background:var(--color-surface-elevated);border:1px solid var(--color-border-strong);border-radius:var(--r-full);
+  padding:5px 13px;font-size:12.5px;color:var(--color-text-primary);cursor:pointer;display:flex;align-items:center;
+  gap:7px;transition:border-color .15s var(--ease)}
+.dailyfoc:hover{border-color:var(--color-accent)}
+.dailyfoc.u-high{border-color:var(--color-state-error)}
+.dailyfoc.u-mid{border-color:var(--color-state-warning)}
+.dailyfoc.u-low{border-color:var(--color-state-success)}
+.dailyfoc #df-close{color:var(--color-text-muted);padding:0 3px}
+.dailyfoc #df-close:hover{color:var(--color-state-error)}
+.suggestcard{margin-top:12px;border:1px solid var(--color-accent);background:var(--color-surface-elevated);
+  border-radius:var(--r-md);padding:12px 15px;font-size:13px}
+.suggestcard .sc-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.suggestcard .sc-conf{font-size:11px;padding:1px 9px;border-radius:var(--r-full);
+  background:var(--color-surface-input);color:var(--color-text-muted);border:1px solid var(--color-border-strong)}
+.suggestcard .sc-conf.high{color:var(--color-on-accent);background:var(--color-state-success);border-color:transparent}
+.suggestcard .sc-conf.mid{color:var(--color-on-accent);background:var(--color-state-warning);border-color:transparent}
+.suggestcard .sc-weak{color:var(--color-state-error);font-weight:700}
+.narr{border:1px solid var(--color-border-subtle);border-radius:var(--r-md);padding:10px 14px;margin-top:14px}
+.narr summary{font-size:13px}
+.narr .nline{padding:3px 0;font-size:13.5px}
+.narr .nhead{font-size:15px;font-weight:700;color:var(--color-text-primary);margin:6px 0}
+
+/* ---- v1.9: 命令面板 / 快捕 / 悬停动作 ---- */
+.cmdkwrap{position:fixed;inset:0;background:var(--color-overlay-backdrop);backdrop-filter:blur(4px);
+  z-index:140;display:none;align-items:flex-start;justify-content:center;padding-top:15vh}
+.cmdkbox{width:min(560px,90vw);background:var(--color-surface-raised);border:1px solid var(--color-border-strong);
+  border-radius:12px;overflow:hidden;box-shadow:var(--sh-3);animation:kpop .15s ease-out}
+@keyframes kpop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+#cmdk-input{width:100%;box-sizing:border-box;background:transparent;border:none;outline:none;
+  color:var(--color-text-primary);font-size:16px;padding:14px 16px}
+#cmdk-res{max-height:52vh;overflow:auto;border-top:1px solid var(--border)}
+.ckitem{display:flex;gap:9px;align-items:center;padding:9px 14px;cursor:pointer;font-size:13.5px;
+  border-bottom:1px solid var(--border)}
+.ckitem.sel{background:var(--color-surface-selected);box-shadow:inset 3px 0 0 var(--color-accent)}
+.ckitem .ci{width:20px;text-align:center}
+.ckitem .ct{flex:1;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ckitem .cx{font-size:11px;color:var(--color-text-muted)}
+.quickbar{position:absolute;left:50%;transform:translateX(-50%);top:100%;margin-top:6px;z-index:40;
+  background:var(--color-surface-raised);border:1px solid var(--accent);border-radius:var(--r-full);padding:4px 6px;}
+/* D-7 3A: 删除 .quickbar.open display 权重规则 —— JS 内联 style 全权控制(openQC/closeQC), 冗余 */
+.qc-input{width:min(420px,70vw);background:transparent;border:none;outline:none;color:var(--color-text-primary);
+  font-size:13.5px;padding:6px 10px}
+.topbar{position:relative}
+/* 任务行悬停快捷动作(C5): 绝对定位不占布局, 触屏/窄屏隐藏 */
+.task .hact{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:none;gap:4px}
+.task:hover .hact,.task:focus-within .hact,body.kbmode .task.kb-focus .hact{display:inline-flex}
+.task:hover .txt{padding-right:86px}
+.task .hact button{border:none;background:var(--card2);color:var(--body);cursor:pointer;
+  border-radius:6px;width:26px;height:24px;font-size:12px;transition:background-color .15s var(--ease),color .15s var(--ease),transform .15s var(--ease)}
+.task .hact button:hover{background:var(--accent);color:var(--color-on-accent)}
+/* 复习卡快捷评分条 */
+.rec .qbar{display:none;gap:4px;margin-left:auto}
+.rec:hover .qbar{display:inline-flex}
+.rec .qbar button{border:1px solid var(--border2);background:var(--card2);color:var(--dim);cursor:pointer;
+  border-radius:6px;width:22px;height:22px;font-size:11px}
+.rec .qbar button:hover{background:var(--good);color:var(--color-on-accent);border-color:transparent}
+@media(max-width:768px){.task .hact{display:none!important}.rec .qbar{display:none!important}}
+
+/* ---- 键盘流 / 批量选择 / 拖拽(v1.3 保留) ---- */
+.kb-focus{outline:2px solid var(--accent)!important;outline-offset:1px;background:var(--hover)!important}
+.task.sel{background:var(--hover)!important;box-shadow:inset 3px 0 0 var(--accent)}
+.task.dragging{opacity:.45}
+.task.dropline-top::before,.task.dropline-bottom::after{content:'';position:absolute;left:6px;right:6px;height:3px;
+  border-radius:2px;background:var(--accent)}
+.task.dropline-top::before{top:-2px}
+.task.dropline-bottom::after{bottom:-2px}
+.flash-panel{outline:2px dashed var(--color-accent);outline-offset:4px}   /* D-7 3A: 去冗余权重(唯一定义) */
+
+/* ---- 浮层: 批量条 / Ctrl+K 搜索 / 引导 / 右键菜单 / 模态框 ---- */
+.batchbar{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:98;
+  background:var(--color-surface-raised);border:1px solid var(--color-border-strong);border-radius:var(--r-md);padding:8px 12px;
+  box-shadow:var(--sh-3);gap:8px;align-items:center;flex-wrap:wrap}
+.batchbar.on{display:flex}
+.batchbar b{color:var(--color-text-primary);font-size:13px;margin-right:4px}
+.ksearch{position:fixed;inset:0;background:var(--color-overlay-backdrop);z-index:110;display:none;align-items:flex-start;
+  justify-content:center;padding-top:10vh}
+.ksbox{background:var(--color-surface-raised);border:1px solid var(--color-border-strong);border-radius:var(--r-md);width:92%;max-width:560px;
+  overflow:hidden;box-shadow:var(--sh-3)}
+#ksinput{width:100%;box-sizing:border-box;background:transparent;border:none;outline:none;color:var(--color-text-primary);
+  font-size:16px;padding:14px 16px}
+#ksinput::placeholder{color:var(--color-text-placeholder)}
+#ksres{max-height:46vh;overflow:auto;border-top:1px solid var(--border)}
+.ksitem{display:flex;gap:8px;align-items:baseline;padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)}
+.ksitem:hover,.ksitem.hot{background:var(--color-surface-selected)}
+.ksitem .kt{flex:0 0 52px;font-size:11px;color:var(--color-accent)}
+.ksitem .kb{flex:1;font-size:13px;color:var(--color-text-primary);overflow:hidden}
+.ksitem .kb mark{background:var(--color-state-warning);color:var(--color-on-accent);border-radius:3px;padding:0 2px}
+.kshint{padding:7px 14px;font-size:11px;color:var(--color-text-muted)}
+.guidewrap{display:none;position:fixed;inset:0;background:var(--color-overlay-backdrop);z-index:120;align-items:center;
+  justify-content:center;padding:16px}
+.gcard{background:var(--color-surface-raised);border:1px solid var(--color-border-strong);border-radius:var(--r-lg);width:94%;max-width:430px;
+  padding:22px 24px;text-align:center;color:var(--color-text-body);box-shadow:var(--sh-3)}
+.gcard .gestep{font-size:40px;margin-bottom:8px}
+.gcard h3{color:var(--color-accent);margin-bottom:8px;font-size:17px}
+.gcard p.gdesc{font-size:13px;color:var(--color-text-muted);line-height:1.7;min-height:44px}
+.gdots{margin:12px 0;display:flex;gap:6px;justify-content:center}
+.gdots i{width:8px;height:8px;border-radius:var(--r-full);background:var(--color-border-strong)}
+.gdots i.on{background:var(--color-accent);width:20px;transition:width .25s}
+.ctx{display:none;position:absolute;z-index:50;background:var(--color-surface-elevated);border:1px solid var(--color-border-strong);
+  border-radius:10px;padding:6px;box-shadow:var(--sh-2)}
+.ctx div{padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;white-space:nowrap}
+.ctx div:hover{background:var(--color-border-strong) }
+.modalwrap{display:none;position:fixed;inset:0;background:var(--color-overlay-backdrop);z-index:99;align-items:center;
+  justify-content:center;padding:16px}
+.modal{background:var(--color-surface-raised);border:1px solid var(--color-border-strong);border-radius:var(--r-lg);padding:18px;width:92%;
+  max-width:760px;max-height:82vh;overflow:auto}
+.mdbody table{width:100%}
+/* D-7a Batch 2A: 从 theme.py 覆盖层承接（v1.3 意图: 笔记正文标题用强调色） */
+.mdbody h1,.mdbody h2{color:var(--accent)}
+.hmwrap{overflow-x:auto;padding-bottom:6px}
+.glow{animation:pulseGlow 1.6s ease-in-out infinite}
+@keyframes pulseGlow{50%{box-shadow:0 0 14px rgba(159,232,164,.75)}}
+
+/* ==============================
+   v2.1 视觉升级层（纯样式）
+   参考 Pico / Simple.css / Water.css 的克制卡片语言：
+   不引入外部依赖，不改变 DOM 结构与 JS 选择器。
+   ============================== */
+:root{
+  --surface-line: rgba(255,255,255,.055);
+  --surface-highlight: rgba(255,255,255,.03);
+  --card-shadow:
+    0 1px 2px rgba(3,7,18,.28),
+    0 12px 32px rgba(3,7,18,.20);
+  --card-shadow-hover:
+    0 2px 6px rgba(3,7,18,.24),
+    0 20px 48px rgba(3,7,18,.28);
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+body{
+  color:var(--body);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,.032) 0%, transparent 220px),
+    linear-gradient(90deg, rgba(138,180,255,.035) 0%, transparent 38%, rgba(159,232,164,.025) 100%);
+  background-attachment:fixed;
+}
+
+/* 外壳：侧栏保持固定，但用更清晰的表面和导航反馈分层。 */
+.side{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), transparent 34%),
+    linear-gradient(180deg, var(--card), var(--bg));
+  box-shadow:1px 0 0 var(--border), 18px 0 44px rgba(3,7,18,.12);
+}
+.brand{padding-bottom:20px}
+.bsub{
+  color:var(--color-text-primary);
+  background:linear-gradient(135deg, var(--accent-dim), transparent);
+  border-color:var(--border2);
+}
+.nav a{
+  position:relative;
+  min-height:36px;
+  padding:9px 12px;
+  border-left-width:0;
+  border-radius:10px;
+  color:var(--color-text-body);
+  font-weight:500;
+}
+.nav a::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:50%;
+  width:3px;
+  height:0;
+  border-radius:999px;
+  background:var(--accent);
+  opacity:0;
+  transform:translateY(-50%);
+  transition:height var(--duration-normal) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+}
+.nav a:hover{
+  color:var(--color-text-primary);
+  background:var(--hover);
+  transform:translateX(2px);
+}
+.nav a.on{color:var(--color-text-primary);background:var(--color-nav-active-bg)}
+.nav a.on::before{height:17px;opacity:1}
+.sidefoot{
+  padding-top:16px;
+  border-top:1px solid var(--border-subtle);
+}
+
+.topbar{
+  min-height:64px;
+  padding:15px clamp(20px, 3vw, 32px);
+  border-bottom:1px solid var(--border-subtle);
+  background:
+    linear-gradient(90deg, var(--surface-highlight), transparent 52%),
+    linear-gradient(180deg, var(--card), var(--bg));
+  box-shadow:0 8px 24px rgba(3,7,18,.12);
+}
+.topbar h1{font-size:19px;font-weight:700}
+.clock,
+.mstep,
+.tag{
+  border:1px solid var(--border-subtle);
+  box-shadow:0 1px 2px rgba(3,7,18,.16);
+}
+
+/* 内容栅格与卡片：更大的呼吸感，但保留原有 12 列结构。 */
+.dash{
+  gap:clamp(16px, 1.5vw, 22px);
+  padding:26px clamp(20px, 3vw, 32px) 12px;
+}
+.card{
+  position:relative;
+  padding:22px;
+  overflow:visible;
+  border-radius:18px;
+  border-color:var(--color-border-subtle);
+  background:
+    linear-gradient(180deg, var(--surface-highlight), transparent 46%),
+    var(--color-surface-raised);
+  box-shadow:var(--card-shadow);
+  transition:border-color var(--duration-normal) var(--ease-out),
+             box-shadow var(--duration-normal) var(--ease-out),
+             transform var(--duration-normal) var(--ease-out);
+}
+.card:hover{
+  border-color:var(--border2);
+  box-shadow:var(--card-shadow-hover);
+  transform:translateY(-2px);
+}
+.card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto;
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--surface-line), transparent);
+  pointer-events:none;
+}
+.card h2{
+  margin-bottom:14px;
+  color:var(--color-accent);
+  font-size:15px;
+  font-weight:750;
+  letter-spacing:.01em;
+}
+.card>h2::before,
+.cardhead h2::before{
+  width:5px;
+  height:16px;
+  margin-right:10px;
+  background:linear-gradient(180deg, var(--accent), var(--good));
+  box-shadow:0 0 0 1px rgba(255,255,255,.08);
+}
+.cardhead{
+  padding-bottom:12px;
+  margin-bottom:16px;
+  border-bottom:1px solid var(--border-subtle);
+}
+.big{font-size:clamp(34px, 3vw, 42px)}
+
+/* 任务列表：独立可点击面片，优先级靠左侧色条表达，提升扫读效率。 */
+.task{
+  min-height:46px;
+  padding:12px 13px;
+  border:1px solid transparent;
+  border-left:3px solid var(--border2);
+  border-radius:12px;
+  background:linear-gradient(90deg, rgba(255,255,255,.025), transparent 68%);
+}
+.task+.task{margin-top:8px}
+.task:hover{
+  border-color:var(--border2);
+  background:
+    linear-gradient(90deg, var(--accent-dim), transparent 74%),
+    var(--hover);
+  transform:translateX(2px);
+  box-shadow:0 6px 18px rgba(3,7,18,.14);
+}
+.task[data-pri="1"]{border-left-color:var(--bad)}
+.task[data-pri="3"]{border-left-color:color-mix(in srgb, var(--dim) 62%, transparent)}
+.task input{
+  transform:scale(1.22);
+  vertical-align:-3px;
+  filter:drop-shadow(0 1px 2px rgba(3,7,18,.24));
+}
+.task .txt{
+  display:inline-block;
+  max-width:calc(100% - 34px);
+  vertical-align:middle;
+  line-height:1.55;
+}
+.tdetail.open{
+  margin-top:7px;
+  padding-top:7px;
+  margin-left:31px;
+  border-top:1px dashed var(--border-subtle);
+}
+.task.completed{opacity:.62;background:transparent}
+.task.sel{
+  background:var(--accent-dim)!important;
+  box-shadow:inset 3px 0 0 var(--accent), 0 0 0 1px var(--border2)!important;
+}
+
+/* 列表型内容统一为低噪声子卡，避免整页都是重边框。 */
+.rec{
+  padding:11px 13px;
+  border:1px solid var(--border-subtle);
+  border-left:3px solid var(--border2);
+  border-radius:12px;
+  background:linear-gradient(90deg, rgba(255,255,255,.02), transparent 72%);
+  align-items:center;
+}
+.rec:hover{
+  border-left-color:var(--accent);
+  background:linear-gradient(90deg, var(--accent-dim), transparent 76%), var(--hover);
+  box-shadow:0 5px 16px rgba(3,7,18,.12);
+}
+.rcon{font-weight:700}
+
+/* 按钮：清晰的可点击边界、hover 抬升和 active 按压反馈。 */
+.btn,
+.btn-mini{
+  position:relative;
+  border:1px solid transparent;
+  border-radius:12px;
+  font-weight:650;
+  will-change:transform;
+}
+.btn{
+  min-height:36px;
+  padding:9px 16px;
+  box-shadow:0 1px 2px rgba(3,7,18,.22), 0 8px 20px rgba(3,7,18,.12);
+}
+.btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 2px 6px rgba(3,7,18,.20), 0 12px 26px rgba(3,7,18,.18);
+}
+.btn:active,
+.btn-mini:active{
+  transform:translateY(1px) scale(.985);
+  box-shadow:0 1px 3px rgba(3,7,18,.18);
+}
+.btn-ghost,
+#quickbar ~ .btn.btn-ghost,
+.btn-mini.btn-ghost{
+  color:var(--text);
+  border-color:var(--border2);
+}
+.btn-ghost:hover,
+.btn-mini.btn-ghost:hover{
+  background:var(--hover);
+  border-color:var(--accent);
+}
+.btn-good{
+  box-shadow:0 1px 2px rgba(3,7,18,.20), 0 8px 20px rgba(63,185,80,.14);
+}
+.btn-mini{
+  min-height:30px;
+  padding:6px 11px;
+  border-radius:10px;
+}
+.btn:focus-visible{
+  outline:none;
+  box-shadow:var(--focus-ring);
+}
+.redbadge{
+  border:1px solid rgba(249,226,175,.55);
+  box-shadow:0 4px 14px rgba(210,153,34,.16);
+}
+
+/* 表格与详情：弱化网格线，强化标题层级。 */
+th{
+  color:var(--color-accent);
+  font-weight:650;
+  letter-spacing:.06em;
+}
+tbody tr{transition:background-color var(--duration-fast) var(--ease-out)}
+summary{
+  color:var(--color-accent);
+  font-weight:600;
+}
+summary:hover{color:var(--accent)}
+.narr{
+  border-radius:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.025), transparent);
+}
+.modal,
+.gcard,
+.ksbox,
+.cmdkbox,
+.batchbar{
+  border-color:var(--color-border-strong);
+  box-shadow:0 24px 70px rgba(3,7,18,.42);
+}
+.ctx div:first-child{border-radius:9px 9px 0 0}
+.ctx div:last-child{border-radius:0 0 9px 9px}
+
+/* 响应式：先压缩 12 栏密度；窄屏把侧栏折叠成横向顶部导航。 */
+@media (max-width:1240px){
+  :root{--sbw:206px;--gap:16px}
+  .dash{grid-template-columns:repeat(8, 1fr)}
+  .s12,.s8{grid-column:span 8}
+  .s6,.s4{grid-column:span 4}
+  .ovgrid{gap:20px}
+}
+@media (max-width:920px){
+  :root{--sbw:0px}
+  body{background-attachment:scroll}
+  .side{
+    position:static;
+    width:100%;
+    max-width:100vw;
+    overflow-x:hidden;
+    flex-direction:row;
+    align-items:center;
+    gap:12px;
+    padding:14px 18px;
+    box-shadow:inset 0 -1px 0 var(--border-subtle);
+  }
+  .brand{flex:0 0 auto;padding:0}
+  .nav{
+    flex:1;
+    min-width:0;
+    flex-direction:row;
+    gap:6px;
+    margin-top:0;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{white-space:nowrap}
+  .sidefoot{display:none}
+  .main{margin-left:0}
+  .main{width:100%}
+  .topbar{position:static;padding:14px 18px}
+  .dash{
+    grid-template-columns:minmax(0, 1fr);
+    padding:20px 18px 10px;
+  }
+  .dash>.card{min-width:0;max-width:100%}
+  .s12,.s8,.s6,.s4{grid-column:auto}
+  .ovgrid{grid-template-columns:1fr;text-align:left}
+  .ovdiv{display:none}
+  .foot{padding:6px 18px 24px}
+}
+@media (max-width:640px){
+  .side{padding:12px 14px}
+  .topbar,
+  .dash,
+  .foot{padding-left:14px;padding-right:14px}
+  .card{padding:16px;border-radius:16px}
+  .big{font-size:32px}
+  .task{padding:10px 11px}
+  .task .hact{position:static;display:flex;margin:8px 0 0 29px}
+  .task:hover .txt{padding-right:0}
+  .tag{white-space:normal}
+  .batchbar{
+    right:12px;left:12px;
+    transform:none;
+    justify-content:center;
+  }
+  #lhtoast{width:max-content;max-width:calc(100vw - 24px)}
+}
+
+/* ==============================
+   v2.2 主题兼容修正层（纯样式）
+   目标：修复 v2.1 与末位主题覆盖层的冲突。
+   规则：不改 DOM、不动 JS 选择器，只调整层叠顺序和主题敏感样式。
+   ============================== */
+/* 1) 恢复任务行 hover：主题层会强制 var(--hover)，
+      这里改为“底色仍交给主题变量，只补边框/位移/阴影”。 */
+.task:hover{
+  background:var(--hover)!important;
+}
+/* 2) 选中态优先级高于普通 hover，避免批量选择时被覆盖。 */
+.task.sel{
+  background:var(--accent-dim)!important;
+  box-shadow:inset 3px 0 0 var(--accent), 0 0 0 1px var(--border2)!important;
+}
+/* 3) 卡片表面回归主题色，保留 v2.1 的圆角与阴影；
+      防止浅色/其他暗色主题下残留白色高光。 */
+.card,
+.modal,
+.gcard,
+.ksbox,
+.cmdkbox,
+.batchbar{
+  background:var(--card)!important;
+}
+.card{
+  box-shadow:0 1px 2px rgba(0,0,0,.16), 0 12px 30px rgba(0,0,0,.14);
+}
+/* 4) 导航/按钮文字对比度跟随 accent，不写死深色值，
+      兼容三套主题下的强调色变化。 */
+.nav a.on{color:var(--color-text-primary)!important}
+.btn{background:var(--accent)!important;color:var(--color-on-accent)!important}
+.btn:hover{background:var(--accent-hov)!important;color:var(--color-on-accent)!important}
+.btn-mini{background:var(--card2)!important;color:var(--body)!important;border-color:var(--border2)!important}
+.btn-mini:hover{background:var(--hover)!important;border-color:var(--accent)!important;color:var(--text)!important}
+.task .hact button{background:var(--card2)!important;color:var(--body)!important}
+.task .hact button:hover{background:var(--accent)!important;color:var(--color-on-accent)!important}
+.rec .qbar button{background:var(--card2)!important;color:var(--dim)!important;border-color:var(--border2)!important}
+.rec .qbar button:hover{background:var(--good)!important;color:var(--color-on-accent)!important}
+/* 5) 输入框/表格/代码块统一消费主题变量。 */
+input[type=text],input[type=datetime-local],input[type=number],textarea{
+  background:var(--color-surface-input)!important;
+  border-color:var(--color-border-subtle)!important;
+  color:var(--color-text-primary)!important;
+}
+td,th{border-bottom-color:var(--border)!important}
+code{background:var(--input)!important;color:var(--warn)!important}
+pre{background:var(--input)!important}
+blockquote{border-left-color:var(--accent)!important}
+/* 6) 浮层遮罩保持中性黑；浮层面板用主题卡片色。 */
+.ksearch,.guidewrap,.modalwrap{background:var(--color-overlay-backdrop)}
+.ctx{background:var(--color-surface-elevated)!important;border-color:var(--color-border-strong)!important}
+.ctx div:hover{background:var(--color-border-strong)!important}
+
+/* ==============================
+   v2.4 玻璃拟态层（Glassmorphism）
+   目标：把主表面(侧栏/顶栏/卡片/浮层)升级为半透明+背景模糊的现代通透感，
+        同时保留三套主题切换与全部交互。
+   规则：不改 DOM、不动 JS 选择器；基于既有主题变量用 color-mix 派生半透明，
+        不新增主题变量(theme.py 的 hex 集保持为测试契约)。
+   实现：所有玻璃规则放在 @supports 内，不支持 backdrop-filter 的浏览器
+        自动回落到 L4 的实体色表面，视觉仍可用。
+   ============================== */
+@supports (backdrop-filter: blur(1px)) {
+  /* --- 背景光斑：玻璃“透过去”的风景，主区铺柔和径向渐变 --- */
+  body{
+    background-image:
+      radial-gradient(1100px 720px at 82% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 58%),
+      radial-gradient(900px 640px at -8% 42%, color-mix(in srgb, var(--good) 6%, transparent), transparent 60%),
+      radial-gradient(760px 560px at 48% 118%, color-mix(in srgb, var(--bad) 5%, transparent), transparent 62%);
+    background-attachment:fixed;
+  }
+
+  /* --- 玻璃表面基元：半透明 + 背景模糊 + 细边框 + 顶部高光 ---
+     注意：L4 v2.2 用 background:var(--card)!important 锁定实体色，
+     此处用同特异性 .card!important 但位置靠后，覆盖为半透明玻璃面。 */
+  .side,
+  .topbar{
+    background: linear-gradient(180deg, var(--surface-highlight), transparent 42%),
+      color-mix(in srgb, var(--card) 68%, transparent)!important;
+    backdrop-filter: blur(14px) saturate(1.35);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  }
+  .card,
+  .modal,
+  .gcard,
+  .ksbox,
+  .cmdkbox,
+  .batchbar{
+    background: color-mix(in srgb, var(--card) 68%, transparent)!important;
+    backdrop-filter: blur(14px) saturate(1.35);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35);
+  }
+  .card{
+    background-image:
+      linear-gradient(180deg, var(--surface-highlight), transparent 46%),
+      linear-gradient(180deg, color-mix(in srgb, var(--card) 68%, transparent), color-mix(in srgb, var(--card) 52%, transparent))!important;
+  }
+
+  /* --- 玻璃边框：用半透明主题色，形成“一层膜”的细腻描边 --- */
+  .side{border-right:1px solid color-mix(in srgb, var(--border2) 55%, transparent)}
+  .topbar{border-bottom:1px solid color-mix(in srgb, var(--border2) 55%, transparent)}
+  .card,
+  .modal,
+  .gcard,
+  .ksbox,
+  .cmdkbox,
+  .batchbar{
+    border-color: color-mix(in srgb, var(--border2) 55%, transparent);
+  }
+
+  /* --- 浮层玻璃面：命令面板/搜索/周报弹窗用更亮的半透明 --- */
+  .cmdkbox,
+  .modal,
+  .gcard,
+  .ksbox{
+    background: color-mix(in srgb, var(--card2) 72%, transparent)!important;
+  }
+  .cmdkwrap{backdrop-filter: blur(8px) saturate(1.2); -webkit-backdrop-filter: blur(8px) saturate(1.2)}
+}
+
+/* @supports 降级：不支持玻璃味的浏览器走实体色(由 L4 !important 保证，无需额外规则) */
+
+/* ==============================
+   v2.3 排版与状态规整（纯样式）
+   目标：统一字重体系(400/500/600/700)、统一圆角语言、补齐输入与聚焦状态。
+   规则：不改 DOM、不动 JS 选择器；只调整视觉值。
+   ============================== */
+/* --- 字重统一：把 650/750 归一到四档体系 --- */
+.card h2{font-weight:700}
+th{font-weight:600}
+.btn,
+.btn-mini{font-weight:600}
+.big{font-weight:700}
+
+/* --- 圆角语言统一：卡片/子卡/按钮各自用一套语义圆角 --- */
+.btn{border-radius:12px}
+.btn-mini{border-radius:10px}
+.task,
+.rec{border-radius:12px}
+.narr{border-radius:12px}
+
+/* --- 输入框聚焦与状态：补齐 hover / focus-visible / 占位符 --- */
+input[type=text]:hover,
+input[type=datetime-local]:hover,
+input[type=number]:hover,
+textarea:hover{
+  border-color: color-mix(in srgb, var(--border2) 70%, transparent);
+}
+input[type=text]:focus,
+input[type=datetime-local]:focus,
+input[type=number]:focus,
+textarea:focus{
+  outline:none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+::placeholder{color:color-mix(in srgb, var(--dim) 78%, transparent)}
+
+/* =====================================================================
+   v2.5 高级克制层（Premium / Sleek — Apple 式质感）
+   依据 styleseed(premium/sleek) 设计判断：桌面 B2B 字号基准、锁定字体、
+   留白呼吸、单一焦点、语义图标、状态色克制。全部为「样式层追加」，
+   不改 DOM 结构 / JS 选择器 / 主题变量名。叠加在 v2.4 玻璃层之上。
+   ===================================================================== */
+
+/* --- 1) 字体锁定：正文用 系统中文+Inter 回退, 数字/代码用 等宽 --- */
+:root{
+  /* 正文族：Windows 中文首选「微软雅黑 - ui」，西文优先 Inter(不存在则系统)(克制) */
+  --font-ui: "Inter","SF Pro Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  /* 数字/代码等宽族 */
+  --font-mono-ui: "JetBrains Mono","Cascadia Code","SF Mono",Consolas,monospace;
+}
+
+/* --- 2) 桌面 B2B 字号基准：正文 16px, 行高更松弛(styleseed 桌面 body≥16) --- */
+body{
+  font-size:16px;
+  line-height:1.7;
+  letter-spacing:.005em;
+}
+
+/* 卡片等主表面正文跟随 body 提升, 说明文字更清晰 */
+.card,.modal,.gcard,.ksbox,.cmdkbox,.batchbar{font-size:15px}
+
+/* 面板标题梯度：主标题 20px、次级 18px(克制但清晰) */
+h2{font-size:20px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:18px;font-weight:600}
+
+/* 数字一律等宽对齐(表格/计数/进度), 克制不花哨 */
+.num,.insbig,.task .duration,.rec .meta span,.hmwrap .cnt{font-family:var(--font-mono-ui);font-variant-numeric:tabular-nums}
+
+/* --- 3) 留白呼吸：内容宽收拢, 间距加大 --- */
+:root{
+  --content-max-width:1360px;   /* 1480 → 1360 内容更聚拢, 不贴满 */
+  --gap:26px;                   /* 18 → 26 区块间距更松弛 */
+  --sbw:238px;                  /* 侧栏略加宽, 容纳新图标+更大字号 */
+}
+/* 卡片内边距统一到 22-26px(克制的大白) */
+.card,.modal,.gcard{padding:24px 26px}
+.task,.rec{padding:13px 16px}
+
+/* --- 4) 主色升级：更清透蓝紫(只动语义别名, 用 color-mix 保对比度≥4.5) --- */
+:root{
+  --accent-tint: color-mix(in srgb, var(--accent) 82%, #b6c1ff); /* 微偏紫的蓝 */
+  --accent-hov-tint: color-mix(in srgb, var(--accent-hov) 85%, #cfd8ff);
+}
+/* 把主交互色统一走新主色(导航高亮/链接/焦点环/进度已用 --accent 的自动跟着变, 这里补强),
+   但保持字体下 --accent 主题变量名不变 → theme_test 契约不破 */
+a{color:var(--accent-tint)}
+a:hover{color:var(--accent-hov-tint)}
+.nav a.on{border-left-color:var(--accent-tint)}
+input[type=text]:focus,
+input[type=datetime-local]:focus,
+input[type=number]:focus,
+textarea:focus{border-color:var(--accent-tint)}
+
+/* --- 5) 焦点强化：首屏总览 = 单一主导区, 打破「全网格同权重」 --- */
+/* 总览 hero 卡：更主动的高光渐变 + 专属描边 + 白, 视觉上压过其余卡 */
+#pnl-overview .card{
+  position:relative;
+  border:1px solid color-mix(in srgb, var(--accent) 26%, var(--border2));
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.20),
+    0 18px 46px rgba(0,0,0,.28),
+    inset 0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent);
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 74%, transparent), color-mix(in srgb, var(--card) 56%, transparent))!important;
+}
+/* hero 大数字更突出：等宽 + 更大 + 微强调色 */
+#pnl-overview .big{
+  font-family:var(--font-mono-ui);
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(2.6rem,4.5vw,3.6rem);
+  letter-spacing:-.02em;
+  color:var(--text);
+  background:linear-gradient(180deg, var(--text), color-mix(in srgb, var(--text) 60%, var(--accent)));
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* --- 6) 质感强化：卡片 1px 半透明描边 + 顶部高光, 精致不花哨 --- */
+/* 主表面统一「细描边 + 微高光」, 让玻璃更显贵 */
+.card,.modal,.gcard,.ksbox,.cmdkbox{
+  border:1px solid color-mix(in srgb, var(--border2) 62%, transparent);
+  box-shadow:0 1px 2px rgba(0,0,0,.14), 0 10px 28px rgba(0,0,0,.16);
+}
+.card::after,.gcard::after{
+  content:none;
+}
+/* 侧栏/顶栏玻璃更透一点, 主内容浮起 */
+.side{backdrop-filter:blur(18px) saturate(1.35);-webkit-backdrop-filter:blur(18px) saturate(1.35)}
+
+/* 悬停精致化：微位移 + 主色光晕(只在最主表面, 克制) */
+.card{transition:transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s var(--ease)}
+@media (hover:hover){
+  #pnl-overview .card:hover{
+    transform:translateY(-2px);
+    border-color:color-mix(in srgb, var(--accent) 42%, var(--border2));
+    box-shadow:0 2px 4px rgba(0,0,0,.22), 0 24px 56px rgba(0,0,0,.32);
+  }
+}
+
+/* --- 7) 状态色克制：正常/中性态回灰, 彩色只留给「值得注意」--- */
+/* 今日完成度/进度总量这类「中性」读数为灰, 避免满屏彩色 */
+.task .status,.rec .meta span{color:var(--dim)}
+/* 进度条/徽章保持主色, 但弱化非关键背景彩 */
+.ckitem .tag,.pptag{background:color-mix(in srgb, var(--tag-bg) 70%, transparent)}
+.rec .qbar .bar{background:color-mix(in srgb, var(--accent) 46%, var(--border2))}
+
+/* --- 8) 语义矢量图标：替换导航/侧栏 emoji(styleseed §11 禁止 emoji 当图标) --- */
+/* 原理：.ni 原为装 emoji 的 <i>, 隐藏其文本内容, 改用 mask-image 显示矢量线条图标。
+   图标按导航 href 精准分配, 纯 CSS、零 JS 改动、零模板改动。未匹配项自动保留 emoji 兜底。 */
+.nav a .ni{
+  width:17px;height:17px;min-width:17px;flex:0 0 auto;
+  font-size:0;                /* 隐藏 emoji 文本 */
+  line-height:0;
+  background-color:var(--dim); /* 默认图标色(中性灰, 克制) */
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  transition:background-color .15s var(--ease);
+}
+/* 激活项图标用主色 */
+.nav a.on .ni{background-color:var(--accent-tint)}
+.nav a:hover .ni{background-color:var(--text)}
+
+/* 每个导航项的矢量线条图标(Feather 风格, 24×24 viewBox, stroke=1.8) */
+.nav a[href="#pnl-overview"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='9' rx='1.5'/%3E%3Crect x='14' y='3' width='7' height='5' rx='1.5'/%3E%3Crect x='14' y='12' width='7' height='9' rx='1.5'/%3E%3Crect x='3' y='16' width='7' height='5' rx='1.5'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='9' rx='1.5'/%3E%3Crect x='14' y='3' width='7' height='5' rx='1.5'/%3E%3Crect x='14' y='12' width='7' height='9' rx='1.5'/%3E%3Crect x='3' y='16' width='7' height='5' rx='1.5'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-tasks"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-heatmap"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M8 2v4M16 2v4M3 9h18'/%3E%3Cpath d='M8 20v-5M12 20v-8M16 20v-3'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M8 2v4M16 2v4M3 9h18'/%3E%3Cpath d='M8 20v-5M12 20v-8M16 20v-3'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-review"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-graph"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='5' cy='6' r='2.4'/%3E%3Ccircle cx='19' cy='6' r='2.4'/%3E%3Ccircle cx='12' cy='18' r='2.4'/%3E%3Cpath d='M7.2 7.6 10 16M16.8 7.6 14 16M7.5 6h9'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='5' cy='6' r='2.4'/%3E%3Ccircle cx='19' cy='6' r='2.4'/%3E%3Ccircle cx='12' cy='18' r='2.4'/%3E%3Cpath d='M7.2 7.6 10 16M16.8 7.6 14 16M7.5 6h9'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-rec"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12l2 4-8 14L4 7z'/%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M12 21 8 7M12 21l4-14'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12l2 4-8 14L4 7z'/%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M12 21 8 7M12 21l4-14'/%3E%3C/svg%3E");
+}
+.nav a[href="#pnl-progress"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+}
+.nav a[href="#setcard-wrap"] .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+}
+
+
+/* ==============================
+   v2.6 去 AI 味装饰层（De-AI Decor Removal）
+   目标：移除 Codex 时代遗留的模板化装饰元素，回归 Linear 式克制。
+   规则：只覆盖视觉装饰，不动布局/交互/功能选择器。
+   ============================== */
+
+/* 1. 移除卡片标题前的渐变色竖条 —— AI 模板标配装饰，Linear/Vercel 均无
+   (D-7 3B: 去权重——压 L158/L635 无权重原规则, 同特异性更晚) */
+.card h2::before,
+.cardhead h2::before {
+  display: none;
+}
+
+/* 2. 移除卡片顶部的 1px 高光渐变线 —— 廉价玻璃感装饰
+   (D-7 3B: 去权重——压 L620 无权重原规则) */
+.card::before {
+  display: none;
+}
+
+/* 3. 移除卡片内部的渐变背景叠加层 —— 纯色表面更干净 */
+.card {
+  background-image: none !important;
+}
+
+/* 4. 移除 body 背景的三处径向渐变光斑 —— AI 深色主题标配"氛围光"，显脏
+   (D-7 3B: 去权重——压 L524 无权重原规则) */
+body {
+  background-image: none;
+}
+
+/* 5. 移除任务行 hover 时的 translateX 右移 —— 无意义微动效
+   (D-7 3B: 去权重——压 L660 无权重原规则) */
+.task:hover {
+  transform: none;
+}
+
+/* 6. 进度条从蓝绿渐变改为纯色 —— 蓝+绿横向渐变是 2012 年风格
+   (D-7 3B: 去权重——压 L180 无权重原规则) */
+.fill.main {
+  background: var(--accent);
+}
+
+/* 7. 柱状图从蓝紫渐变改为纯色
+   (D-7 3B: 去权重——压 L189 无权重原规则) */
+.bbar {
+  background: var(--accent);
+}
+
+/* 8. 总览 hero 卡的渐变文字改回纯色 —— 渐变文字是 AI 炫技标配
+   (D-7 3B: 去权重×5——压 L1084 无权重渐变文字原规则, 同特异性更晚) */
+#pnl-overview .big {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
+  color: var(--text);
+}
+
+/* 9. 总览 hero 卡的特殊高光渐变背景移除 —— 回归普通卡片 */
+#pnl-overview .card {
+  background-image: none !important;
+  box-shadow: var(--sh-1) !important;
+  border-color: var(--color-border-subtle) !important;
+}
+
+/* 10. 柱状图升级: 全圆角+收窄+hover亮度
+   (D-7 3B: 去权重×3——压 L189 无权重原规则) */
+.bbar {
+  border-radius: 999px;
+  max-width: 18px;
+  transition: height .4s var(--ease), filter .15s var(--ease-out);
+}
+.bbar:hover {
+  filter: brightness(1.25);
+}
+.bcol {
+  gap: 6px;
+}
+
+/* 11. 按钮四态精致化: Linear式克制, 去掉粗暴brightness */
+.btn {
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+  transition: background-color .15s var(--ease-out),
+              box-shadow .15s var(--ease-out),
+              transform .1s var(--ease-out) !important;
+}
+.btn:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+}
+.btn:disabled, .btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.btn-ghost {
+  box-shadow: none !important;
+}
+.btn-ghost:hover {
+  box-shadow: none !important;
+  transform: none;
+  border-color: var(--color-accent) !important;
+}
+.btn-mini {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+}
+
+/* 12. 输入框四态精致化 */
+input[type=text], input[type=datetime-local], input[type=time],
+input[type=number], textarea, select {
+  border-radius: 8px !important;
+  transition: border-color .15s var(--ease-out),
+              box-shadow .15s var(--ease-out) !important;
+}
+input[type=text]:hover, input[type=datetime-local]:hover, input[type=time]:hover,
+input[type=number]:hover, textarea:hover, select:hover {
+  border-color: var(--color-border-strong) !important;
+}
+input[type=text]:focus, input[type=datetime-local]:focus, input[type=time]:focus,
+input[type=number]:focus, textarea:focus, select:focus {
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px rgba(94,106,210,0.18) !important;
+}
+input:disabled, textarea:disabled, select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+::placeholder {
+  color: var(--color-text-muted) !important;
+  opacity: 0.6;
+}
+
+/* 13. 标签/徽章精致化: 统一圆角和字重
+   (D-7 3C: 去权重×3——压 L172/175/208/355/591 无权重原规则, 同特异性更晚) */
+.tag, .badge, .mstep, .pptag {
+  border-radius: 6px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.mtag {
+  font-weight: 600;
+}
+
+/* 14. 卡片hover克制化: 去掉抬升, 只改边框色 */
+.card:hover {
+  transform: none !important;
+  border-color: var(--color-border-strong) !important;
+  box-shadow: var(--sh-1) !important;
+}
+
+/* 15. 禁用 v2.4 玻璃拟态: backdrop-filter 是 GPU 性能杀手(十几个卡片同时模糊导致卡顿),
+   且半透明背景掩盖新配色。改回纯色表面, 性能和视觉质感同时提升。 */
+.side,
+.topbar,
+.card,
+.modal,
+.gcard,
+.ksbox,
+.cmdkbox,
+.batchbar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: var(--card) !important;
+  background-image: none !important;
+}
+.side {
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg) 100%) !important;
+}
+.topbar {
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg) 96%) !important;
+}
+body {
+  background-image: none !important;
+  background-color: var(--bg) !important;
+}
+.side {
+  border-right: 1px solid var(--color-border-subtle) !important;
+}
+.topbar {
+  border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+.card,
+.modal,
+.gcard,
+.ksbox,
+.cmdkbox,
+.batchbar {
+  border-color: var(--color-border-subtle) !important;
+}
+.cmdkbox,
+.modal,
+.gcard,
+.ksbox {
+  background: var(--card2) !important;
+}
+
+/* ==============================
+   v2.7 面板标题矢量图标(第二批, UI-007)
+   机制与侧栏第一批(.nav a .ni)完全一致: <i class="ni"> 内的 emoji 由
+   font-size:0 隐藏, mask-image 按面板 id 精准分配, 未匹配面板 emoji 兜底。
+   颜色只消费现有 token(--dim 中性灰, 与导航默认一致)。
+   ⚠ 新增面板时须在本节同步补 mask 规则, 否则标题将无图标(裸 h2 降级)。
+   ============================== */
+.card h2 .ni{
+  display:inline-block;
+  width:16px;height:16px;
+  font-size:0;
+  vertical-align:middle;
+  margin-right:7px;
+  background-color:var(--dim);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+}
+/* 复用第一批: 总览(网格) */
+#pnl-overview h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='9' rx='1.5'/%3E%3Crect x='14' y='3' width='7' height='5' rx='1.5'/%3E%3Crect x='14' y='12' width='7' height='9' rx='1.5'/%3E%3Crect x='3' y='16' width='7' height='5' rx='1.5'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='9' rx='1.5'/%3E%3Crect x='14' y='3' width='7' height='5' rx='1.5'/%3E%3Crect x='14' y='12' width='7' height='9' rx='1.5'/%3E%3Crect x='3' y='16' width='7' height='5' rx='1.5'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 今日任务(勾选框) */
+#pnl-tasks h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+
+/* 新增: 今日完成度(对勾圆) */
+#pnl-today h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 5-5.5'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 12.5l2.5 2.5 5-5.5'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 学习洞察(柱状) */
+#pnl-insight h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 学习热力图(日历) */
+#pnl-heatmap h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M8 2v4M16 2v4M3 9h18'/%3E%3Cpath d='M8 20v-5M12 20v-8M16 20v-3'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='2'/%3E%3Cpath d='M8 2v4M16 2v4M3 9h18'/%3E%3Cpath d='M8 20v-5M12 20v-8M16 20v-3'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 复习中心(时钟回转) */
+#pnl-review h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+}
+/* 新增: 记忆衰减(下行趋势) */
+#pnl-decay h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 18l-9.5-9.5-5 5L2 7'/%3E%3Cpath d='M17 18h6v-6'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 18l-9.5-9.5-5 5L2 7'/%3E%3Cpath d='M17 18h6v-6'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 知识图谱(节点网络) */
+#pnl-graph h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='5' cy='6' r='2.4'/%3E%3Ccircle cx='19' cy='6' r='2.4'/%3E%3Ccircle cx='12' cy='18' r='2.4'/%3E%3Cpath d='M7.2 7.6 10 16M16.8 7.6 14 16M7.5 6h9'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='5' cy='6' r='2.4'/%3E%3Ccircle cx='19' cy='6' r='2.4'/%3E%3Ccircle cx='12' cy='18' r='2.4'/%3E%3Cpath d='M7.2 7.6 10 16M16.8 7.6 14 16M7.5 6h9'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 学习推荐(宝石) */
+#pnl-rec h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12l2 4-8 14L4 7z'/%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M12 21 8 7M12 21l4-14'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12l2 4-8 14L4 7z'/%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M12 21 8 7M12 21l4-14'/%3E%3C/svg%3E");
+}
+/* 新增: 报告(文档) */
+#pnl-reports h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8M16 17H8M10 9H8'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8M16 17H8M10 9H8'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 科目进度(柱状阶梯) */
+#pnl-progress h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 20h18'/%3E%3Crect x='5' y='12' width='3.4' height='7' rx='1'/%3E%3Crect x='10.3' y='8' width='3.4' height='11' rx='1'/%3E%3Crect x='15.6' y='4' width='3.4' height='15' rx='1'/%3E%3C/svg%3E");
+}
+/* 新增: 本周里程碑(旗标) */
+#pnl-milestone h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'/%3E%3Cpath d='M4 22v-7'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'/%3E%3Cpath d='M4 22v-7'/%3E%3C/svg%3E");
+}
+/* 新增: 知识库(书本) */
+#pnl-kb h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E");
+}
+/* 复用第一批: 设置(齿轮) */
+#setcard-wrap h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+}
+/* 新增: 帮助(问号圆) */
+#pnl-help h2 .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+}
+
+/* ==============================
+   v2.8 按钮矢量图标(第三批, Task06): topbar/工具条控件 emoji → mask
+   机制同 v2.7(.card h2 .ni): <i class="ni"> 内 emoji 由 font-size:0 隐藏,
+   mask 按控件 id/容器精准分配; 图标色随按钮变体消费现有 token:
+   实底按钮(accent/good)用 --color-on-accent, ghost 用 --body。
+   ⚠ 新增控件时须同步补 mask, 否则图标为空(emoji 已被隐藏)。
+   ============================== */
+.btn .ni{
+  display:inline-block;
+  width:13px;height:13px;
+  font-size:0;
+  vertical-align:middle;
+  margin-right:5px;
+  background-color:var(--color-on-accent);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+}
+.btn-ghost .ni{background-color:var(--body)}
+/* 中性 .btn-mini(底=card2, 文字=body): 图标须随文字色, 否则暗色主题下
+   继承 .btn .ni 的 on-accent 近黑 → 不可见(2026-08-31 修复, 对比度 1.04→AA) */
+.btn-mini .ni{background-color:var(--body)}
+/* 快捕(加号) */
+#btn-capture .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
+#btn-note .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'/%3E%3C/svg%3E");
+}
+#btnweek .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 4v6h-6'/%3E%3Cpath d='M1 20v-6h6'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 4v6h-6'/%3E%3Cpath d='M1 20v-6h6'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E");
+}
+#btn-batchmode .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 11l3 3L22 4'/%3E%3Cpath d='M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+#btn-backfill .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 3'/%3E%3C/svg%3E");
+}
+#pnl-review .btn-mini .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E");
+}
+#pnl-help .btn .ni{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E");
+}
+#redbadge .ni{
+  display:inline-block;
+  width:12px;height:12px;
+  font-size:0;
+  vertical-align:middle;
+  margin-right:4px;
+  background-color:var(--color-on-accent);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3C/svg%3E");
+}
+
+/* ---- 键盘焦点统一契约（2026-08-31 增补, refactor_phase2/49） ----
+   :focus-visible 必须产生可见聚焦环。此前更早的 .btn-ghost{box-shadow:
+   none!important} 等 !important 规则压掉了聚焦环, 8 个 topbar/工具条按钮
+   三主题实测均无焦点指示(浏览器 computed-style: boxShadow=none/基础投影)。
+   本规则置于文件末尾并带 !important 反压; 仅键盘聚焦触发(:focus-visible),
+   鼠标点击不产生持久聚焦样式。环色沿用既有 --focus-ring(2px bg 间隙+4px accent)。 */
+.btn:focus-visible,
+.btn-mini:focus-visible,
+.btn-ghost:focus-visible,
+.btn-good:focus-visible{
+  outline:none;
+  box-shadow:var(--focus-ring) !important;
+}
+
+/* ═══ Quiet Intelligence 设计令牌 (Phase UI-B Stage1, 2026-08-31) ═══
+   作为后续 UI 阶段的基础。不破坏既有 L1-L4 令牌; 以追加层覆盖/新增,
+   语义与 theme.py 17 变量兼容。中性为主, accent 仅主操作。 */
+:root{
+  /* 字号 scale(5 级) */
+  --qi-f-title: 26px;
+  --qi-f-section: 18px;
+  --qi-f-body: 14px;
+  --qi-f-meta: 12px;
+  --qi-f-num: 28px;
+  /* 间距 scale(8px 基数) */
+  --qi-sp-1: 4px; --qi-sp-2: 8px; --qi-sp-3: 16px;
+  --qi-sp-4: 24px; --qi-sp-5: 32px; --qi-sp-6: 48px;
+  /* 圆角 3 档 */
+  --qi-r-sm: 6px; --qi-r-md: 10px; --qi-r-lg: 14px;
+  /* surface 层级(替代 18px+1px+shadow 全同质) */
+  --qi-surface-0: transparent;              /* 无表面 */
+  --qi-surface-subtle: color-mix(in srgb, var(--card2) 40%, transparent); /* 次级信息 */
+  --qi-surface-bordered: var(--card);       /* 清晰分界 */
+  --qi-surface-primary: var(--card2);       /* Focus Block 唯一 elevated */
+  --qi-border: var(--border);               /* 常规分隔线 */
+  --qi-border-strong: var(--border2);       /* 强调分隔 */
+  /* 阴影: 仅 primary 用, 其余无 */
+  --qi-shadow-primary: 0 1px 2px rgba(0,0,0,.2), 0 8px 24px rgba(0,0,0,.16);
+  --qi-shadow-none: none;
+  /* 文字 */
+  --qi-text-strong: var(--text);
+  --qi-text-body: var(--body);
+  --qi-text-muted: var(--dim);
+  /* accent 仅主操作/焦点/选中 */
+  --qi-accent: var(--accent);
+  --qi-accent-soft: var(--color-state-success-soft);
+  /* 交互态 */
+  --qi-hover: var(--hover);
+  --qi-selected: color-mix(in srgb, var(--accent) 14%, transparent);
+  /* 状态 */
+  --qi-success: var(--good); --qi-warning: var(--warn); --qi-error: var(--bad);
+}
+
+/* ═══ Quiet Intelligence 应用外壳 (Phase UI-B Stage2, 2026-08-31) ═══
+   改造 sidebar/topbar/main 为统一工作区; 保留 DOM 与交互行为。 */
+/* Sidebar: 实底非渐变, 更像原生侧栏 */
+.side{
+  background:var(--bg) !important;
+  border-right:1px solid var(--qi-border);
+  padding:var(--qi-sp-4) var(--qi-sp-3);
+  width:var(--sbw);
+}
+.brand{font-size:var(--qi-f-body);font-weight:700;letter-spacing:.02em;color:var(--qi-text-strong);padding-bottom:var(--qi-sp-4)}
+.brand .bsub{font-size:10px;color:var(--qi-text-muted);background:transparent;border:1px solid var(--qi-border)}
+.nav a{
+  font-size:var(--qi-f-body);
+  padding:var(--qi-sp-2) var(--qi-sp-3);
+  border-left:3px solid transparent;
+  border-radius:var(--qi-r-sm);
+  color:var(--qi-text-muted);
+  gap:var(--qi-sp-2);
+}
+.nav a.on{background:var(--qi-accent-soft);color:var(--qi-text-strong);border-left-color:var(--qi-accent)}
+/* Topbar: 实底 + 分隔, 不再漂浮 */
+.topbar{
+  background:var(--bg) !important;
+  border-bottom:1px solid var(--qi-border);
+  padding:var(--qi-sp-3) var(--qi-sp-5);
+  gap:var(--qi-sp-3);
+}
+.topbar h1{font-size:var(--qi-f-section);font-weight:700;color:var(--qi-text-strong)}
+.topbar .sub{font-size:var(--qi-f-meta);color:var(--qi-text-muted)}
+.clock{background:var(--qi-surface-bordered);border:1px solid var(--qi-border);font-size:var(--qi-f-meta)}
+/* Main: 内容容器居中, 非满宽 */
+.main{margin-left:var(--sbw);min-width:0;background:var(--bg)}
+.dash{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:var(--qi-sp-4);
+  padding:var(--qi-sp-5) var(--qi-sp-5) var(--qi-sp-6);
+  max-width:1200px;
+  margin:0 auto;
+}
+/* 卡片: 从 18px+1px+shadow 全同质 → 收敛为 bordered 表面(次级) */
+.dash .card{
+  background:var(--qi-surface-bordered);
+  border:1px solid var(--qi-border);
+  border-radius:var(--qi-r-md);
+  box-shadow:none;
+  padding:var(--qi-sp-4);
+  background-image:none;
+}
+.dash .card:hover{border-color:var(--qi-border-strong);box-shadow:none}
+.dash .card h2{font-size:var(--qi-f-section);letter-spacing:.01em;color:var(--qi-text-strong);margin-bottom:var(--qi-sp-3)}
+/* 去掉首屏多卡渐变淡入(影响密度感知) */
+.dash .card{animation:none}
+
+/* ═══ Quiet Intelligence Today 体验 (Phase UI-B Stage3, 2026-08-31) ═══
+   pnl-tasks → Primary elevated (Focus Block, 唯一带 shadow);
+   pnl-overview → 视觉退后(次级 bordered, 缩为窄信息条);
+   pnl-today → 与 pnl-overview 同级(合并到 overview 信息条中,
+   今天完成度作为 tertiary 文字, 不需独立卡)。 */
+#pnl-tasks{
+  background:var(--qi-surface-primary);
+  border:1px solid var(--qi-border-strong);
+  border-radius:var(--qi-r-md);
+  box-shadow:var(--qi-shadow-primary);
+  padding:var(--qi-sp-5);
+}
+#pnl-tasks .cardhead h2{font-size:var(--qi-f-section);color:var(--qi-text-strong);letter-spacing:.01em;font-weight:700}
+#pnl-tasks .cardhead .dim{color:var(--qi-text-muted);font-size:var(--qi-f-meta)}
+/* overview 退为窄信息条 */
+#pnl-overview{
+  background:var(--qi-surface-bordered);
+  border:1px solid var(--qi-border);
+  border-radius:var(--qi-r-md);
+  padding:var(--qi-sp-3) var(--qi-sp-4);
+}
+#pnl-overview h2{font-size:var(--qi-f-meta);color:var(--qi-text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:var(--qi-sp-2)}
+#pnl-overview .ovgrid{grid-template-columns:1fr 1fr 2fr;gap:var(--qi-sp-3);display:grid;align-items:center}
+#pnl-overview .ovdiv{display:none}
+#pnl-overview .big{font-size:24px}
+#pnl-overview .ovlab{font-size:10px}
+#pnl-overview .planline{font-size:11px;color:var(--qi-text-muted);margin-top:var(--qi-sp-1)}
+/* today 合并到 overview 视觉退为 tertiary subtle — 隐藏独立 card */
+/* #pnl-today{display:none} 已由 Stage3 视觉整合移除 */
+
+/* ═══ Quiet Intelligence 章节架构 (Phase UI-B Stage4, 2026-08-31) ═══
+   4 章节容器, 章节标题清晰, 章节间留白. 内容用 grid 内部, 章节外用间距. */
+.section{display:contents}
+.section-title{
+  font-size:var(--qi-f-section);
+  font-weight:700;
+  color:var(--qi-text-strong);
+  letter-spacing:.01em;
+  margin:var(--qi-sp-5) 0 var(--qi-sp-3);
+  padding-bottom:var(--qi-sp-2);
+  border-bottom:1px solid var(--qi-border);
+  grid-column:1 / -1;
+}
+.section:first-of-type .section-title{margin-top:0}
+
+/* ═══ Quiet Intelligence 组件语言 (Phase UI-B Stage5, 2026-08-31) ═══
+   视觉重量: Primary (唯一 shadow) / Secondary (bordered) / Tertiary (subtle, 无边框)
+   + Status / Metadata / Progress 一致化. */
+.dash .card>.cardhead h2{font-size:var(--qi-f-meta);color:var(--qi-text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:var(--qi-sp-3)}
+.dash>#pnl-tasks .cardhead h2{font-size:var(--qi-f-section);color:var(--qi-text-strong);text-transform:none;letter-spacing:.01em;font-weight:700}
+.dash>#pnl-tasks .cardhead .dim{color:var(--qi-text-muted);font-size:var(--qi-f-meta);font-weight:400;text-transform:none;letter-spacing:0}
+/* Metadata 统一 muted 小字 */
+.dim,.meta,.sub,.planline{color:var(--qi-text-muted);font-size:var(--qi-f-meta)}
+/* Status 标签: 完成/复习/警告 语义 */
+.status{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:var(--qi-r-sm);font-weight:600}
+.status-good{color:var(--qi-success);background:color-mix(in srgb,var(--qi-success) 12%,transparent)}
+.status-warn{color:var(--qi-warning);background:color-mix(in srgb,var(--qi-warning) 12%,transparent)}
+.status-err{color:var(--qi-error);background:color-mix(in srgb,var(--qi-error) 12%,transparent)}
+/* Empty 状态: 全产品统一 */
+.empty{
+  padding:var(--qi-sp-5) var(--qi-sp-4);
+  text-align:center;
+  color:var(--qi-text-muted);
+  font-size:var(--qi-f-body);
+  border:1px dashed var(--qi-border);
+  border-radius:var(--qi-r-md);
+  background:var(--qi-surface-subtle);
+}
+.empty .empty-title{color:var(--qi-text-strong);font-weight:600;margin-bottom:var(--qi-sp-1);font-size:var(--qi-f-body)}
+.empty .empty-action{margin-top:var(--qi-sp-3)}
+
+/* ═══ Quiet Intelligence 图标一致化 (Phase UI-B Stage6, 2026-08-31) ═══
+   .ni 已有 14px 标准; 补大号/对齐类, 不改 emoji 内容. */
+.ni{vertical-align:-2px;display:inline-block;text-align:center}
+.ni-lg{width:18px !important;height:18px !important;font-size:16px !important;line-height:18px !important}
+/* sidebar 章节导航图标: 大号, 与文字基线对齐 */
+.nav a .ni{font-size:15px;width:18px;height:18px;line-height:18px;vertical-align:-2px}
+/* topbar 按钮图标: 与文字同基线 */
+.topbar button .ni{font-size:14px;vertical-align:-1px}
+/* brand 标识: 更大, 占首位 */
+.brand .ni{font-size:22px;width:26px;height:26px;line-height:26px;vertical-align:-3px}
+
+/* ═══ Quiet Intelligence 交互打磨 (Phase UI-B Stage7, 2026-08-31) ═══
+   统一 hover/selected/disabled 三态, 节奏克制. */
+.transition-base{transition:background .12s var(--ease),color .12s var(--ease),
+  border-color .12s var(--ease),box-shadow .12s var(--ease)}
+/* 全局默认 transition 应用于交互元素 */
+.dash .task,.nav a,.topbar button,.btn,.btn-mini,.btn-ghost,.btn-good,.clock{transition:background .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease),box-shadow .15s var(--ease)}
+/* task 行 selected 态(kb-mode 风格延续) */
+.dash .task.sel{background:var(--qi-selected);border-color:var(--qi-accent)}
+/* disabled 态 */
+.btn:disabled,.btn-mini:disabled,.btn-ghost:disabled,.btn-good:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+/* command palette 可发现: sidebar 底部加 ? 入口提示(纯文本) */
+.sidefoot .kp{font-size:12px;color:var(--qi-text-muted);margin-top:var(--qi-sp-2);display:flex;align-items:center;gap:6px}
+
+/* Phase UI-B Stage3 续: pnl-today 退为次级窄信息条(与 overview 同级), 不独立 Primary */
+#pnl-today{
+  background:var(--qi-surface-bordered);
+  border:1px solid var(--qi-border);
+  border-radius:var(--qi-r-md);
+  box-shadow:none;
+  padding:var(--qi-sp-3) var(--qi-sp-4);
+  grid-column:span 6;
+}
+#pnl-today h2{font-size:var(--qi-f-meta);color:var(--qi-text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:var(--qi-sp-2)}
+#pnl-today .dim,#pnl-today .sub{font-size:var(--qi-f-meta);color:var(--qi-text-muted)}
+#pnl-today .big{font-size:20px}
+
+/* ═══ Quiet Intelligence 组件打磨 (Phase UI-D Stage2, 2026-08-31) ═══
+   FIX2 命令面板遮罩去玻璃拟态 / FIX3 帮助按钮降权 / FIX4 .btn-mini 统一 */
+/* FIX2: 命令面板遮罩 —— 去 backdrop-filter(玻璃拟态违背 Quiet Intelligence),
+   改用中性半透明遮罩, 保留浮层层级/键盘导航/结果高亮 */
+.cmdkwrap{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background:rgba(0,0,0,.68) !important;   /* 中性不透明遮罩(非玻璃) */
+}
+
+/* FIX3: 帮助面板主按钮降权 —— 帮助是次级动作, 不应与主操作(accent 实底)同级。
+   改 ghost 次级: 中性底 + 边框 + body 文字; 保留点击行为/无障碍/图标对齐 */
+#pnl-help .btn{
+  background:var(--card2) !important;
+  color:var(--qi-text-body) !important;
+  border:1px solid var(--qi-border) !important;
+  box-shadow:none !important;
+}
+#pnl-help .btn:hover{
+  background:var(--qi-hover) !important;
+  border-color:var(--qi-border-strong) !important;
+  color:var(--qi-text-strong) !important;
+}
+/* FIX4: .btn-mini 统一到 Quiet Intelligence 按钮语言
+   一个紧凑高度(32px) + 一个紧凑圆角(6px = --qi-r-sm); 不放大, 保持紧凑用途 */
+.btn-mini{
+  min-height:32px !important;
+  height:32px !important;
+  padding:var(--qi-sp-1) var(--qi-sp-2) !important;
+  border-radius:var(--qi-r-sm) !important;
+  font-size:var(--qi-f-meta) !important;
+}

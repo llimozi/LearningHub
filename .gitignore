@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 备份归档（用户数据备份应在外部，仓库内不冗余；meta.json 是运行时元数据，不进 git）
+backup/
+
+# 归档（PyInstaller 历史产物、历史重构备份）
+_archive/
+*.bak
+*.bak-*
+*.bak_pre_*
+
+# 运行时缓存（可重建）
+analytics_cache.json
+search_index.json
+
+# 生成快照（build_dashboard.py --no-open 可再生, 2026-08-31 出库; 历史上曾以陈旧状态入库）
+dashboard.html
+
+# 工具产物（run_tests.py 自动生成，D-11-1 起独立于 reports/ 业务报告）
+tests_output/
+test_report_*.md
+
+# 打包产物（PyInstaller 一次性产出，再生简单）
+build/
+dist/
+*.spec
+
+# 桌面常驻运行时
+app.log
+operations_log.json
+
+# ==== 开源强化（2026-09-02 Phase 0）：用户数据 / 个人档案一律不入库 ====
+# 运行时数据（首次运行自动生成，见 firstrun.py / README）
+tasks.json
+STATUS.json
+settings.json
+plan.json
+daily/
+reports/
+backup/
+tests_output/
+search_index.json
+analytics_cache.json
+
+# 个人档案与复盘文档（仅本仓库开发期使用）
+PROFILE.md
+ROADMAP.md
+SOURCES.md
+REVIEW.md
+BACKLOG.md
+lessons_learned.md
+*.bak
+*.bak-*
+*.bak_pre_*
+
+# 环境变量（密钥不入库；DeepSeek 可选 Key 走环境变量 DEEPSEEK_API_KEY）
+.env
+.env.*
+!.env.example

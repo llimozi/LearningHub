@@ -1,0 +1,9 @@
+# 本次运行截图（不提交）
+current/
+# diff 输出（不提交）
+diff/
+# 数据文件临时备份（不提交）
+.backup/
+# Python
+__pycache__/
+*.pyc

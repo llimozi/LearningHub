@@ -1,0 +1,13 @@
+# 2026-08-31 治理整改: 统一 eol 策略, 消除 autocrlf 字节抖动
+# 实测依据: 应用 save_* 写 LF; 旧 core.autocrlf=true 的 checkout 产出 CRLF,
+# 导致 app 写入与 checkout 内容字节不一致(整文件假差异)。eol=lf 使 checkout
+# 产出与应用写入一致; 仓库内保持 LF 规范化不变(无重整化提交)。
+* text=auto eol=lf
+
+# Windows 批处理必须 CRLF
+*.bat text eol=crlf
+
+# 二进制(显式声明, 防 text=auto 误判)
+*.png binary
+*.ico binary
+*.exe binary
