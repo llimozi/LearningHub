@@ -1,6 +1,8 @@
 # LearningHub · 学习仪表盘 —— 自进化学习系统的桌面常驻 APP
 
-> 一句话：把学习档案（ROADMAP/PROFILE/daily）和任务数据（tasks.json）变成一个可交互的本地仪表盘——勾选实时写回、日切自动顺延、疲劳检测、优先级分流、明日量预测；桌面常驻：托盘图标、开机自启、本地提醒、全局热键；数据闭环：自动备份、导入导出、遗忘曲线复习、周报月报；体验打磨：三主题即时换肤、Ctrl+K 全文搜索、键盘流与拖拽批量。运行时零第三方依赖。
+🔒 **Runtime: Python stdlib only** · 🤖 **AI Enhancement: optional**（DeepSeek API，无 Key 自动降级）
+
+> 一句话：把学习档案（ROADMAP/PROFILE/daily）和任务数据（tasks.json）变成一个可交互的本地仪表盘——勾选实时写回、日切自动顺延、疲劳检测、优先级分流、明日量预测；桌面常驻：托盘图标、开机自启、本地提醒、全局热键；数据闭环：自动备份、导入导出、遗忘曲线复习、周报月报；体验打磨：三主题即时换肤、Ctrl+K 全文搜索、键盘流与拖拽批量。**核心运行零第三方依赖**；仅 AI 周报润色为**可选增强**（需自备 DeepSeek API Key，未配置时自动降级为本地模板）。
 
 ## 功能截图（占位）
 
@@ -211,8 +213,9 @@ python diagnose_mark_reviewed.py           # D-6-1 mark_reviewed bug 诊断(独�
 
 ## 依赖
 
-- 运行：Python 3.8+ 标准库即可跑通全部功能
-- 可选：`pip install jieba`（中文分词更准；未装时 analyzer 自动回退 n-gram 词频，功能不缺）
+- **核心运行**：Python 3.8+ **标准库即可跑通全部功能**（🔒 Runtime: Python stdlib only，零第三方运行时依赖）
+- **可选增强①（AI 周报润色）**：设置环境变量 `DEEPSEEK_API_KEY` 后启用 DeepSeek API；**未配置 Key 自动降级本地模板**，功能不缺（🤖 AI Enhancement: optional）
+- **可选增强②（中文分词）**：`pip install jieba`（更准；未装时 analyzer 自动回退 n-gram 词频，功能不缺）
 - 国内网络建议加镜像：`-i https://pypi.tuna.tsinghua.edu.cn/simple`
 - pytest 仅测试需要：`pip install pytest`（或直接跑 `python planner_test.py`）
 
