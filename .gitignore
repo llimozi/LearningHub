@@ -20,8 +20,7 @@ backup/
 
 # 归档（PyInstaller 历史产物、历史重构备份）
 _archive/
-*.bak
-*.bak-*
+*.bak*
 *.bak_pre_*
 
 # 运行时缓存（可重建）
@@ -64,9 +63,6 @@ SOURCES.md
 REVIEW.md
 BACKLOG.md
 lessons_learned.md
-*.bak
-*.bak-*
-*.bak_pre_*
 
 # 环境变量（密钥不入库；DeepSeek 可选 Key 走环境变量 DEEPSEEK_API_KEY）
 .env

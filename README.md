@@ -64,8 +64,8 @@ LearningHub/
 ├─ PROFILE.md / ROADMAP.md / SOURCES.md / REVIEW.md / BACKLOG.md   档案五件套+待办池
 ├─ lessons_learned.md    v1.x 踩坑档案（BOM/钳制/读写不对称/pack重复/幂等键名…）
 ├─ 项目成果盘点.md        成果盘点文档（每版本更新）
-├─ *_test.py             36 套测试共 385 用例（系统 Python 3.8+ 含 tkinter 全绿；managed Python 缺 tkinter 时 360 例）；pytest 与零依赖 runner 双通道
-│                        routing_test.py(7) 结构契约 + route_contract_test.py(27) HTTP 行为契约（D-6-0）
+├─ *_test.py             43 套测试共 472 用例（系统 Python 3.8+ 含 tkinter 全绿；managed Python 缺 tkinter 时 resident_test 收集失败）；pytest 与零依赖 runner 双通道
+│                        routing_test.py(7) 结构契约 + route_contract_test.py(28) HTTP 行为契约（D-6-0）
 └─ daily\YYYY-MM-DD.md   每日日志（当日 checkbox 仅作 tasks.json 初始化种子）
 ```
 
@@ -197,16 +197,16 @@ STATUS.json 新增字段：`last_open_ts`（本次打开时刻；旧值快照用
 
 ```bash
 python run_tests.py                        # 一键测试: 自动发现 *_test.py, 报告落 tests_output\
-python -m pytest -q                        # 全量 364 例 (32 套; 系统 Python 3.8+ 含 tkinter)
+python -m pytest -q                        # 全量 472 例 (43 套; 系统 Python 3.8+ 含 tkinter)
 python build_dashboard.py --selftest       # rollover 三规则回归(隔离数据)
 python resident.py --smoke-exit            # 常驻壳冒烟: 全组件真跑5秒自退, ExitCode=0 为过
 python csrf_test.py                        # 本地服务 CSRF 防护回归 (v1.10)
-python route_contract_test.py              # D-6-0 路由 HTTP 行为契约 (27 例)
+python route_contract_test.py              # D-6-0 路由 HTTP 行为契约 (28 例)
 python diagnose_mark_reviewed.py           # D-6-1 mark_reviewed bug 诊断(独立, 不进主套件)
 ```
 
-> **环境差异说明**：系统 Python 3.8+ 含 tkinter 时跑 **32 套 / 364 例 / 失败 0**；
-> managed/sandbox Python 若未带 tkinter（如某些便携发行版），resident_test 收集失败，**仍能跑 353 例**；
+> **环境差异说明**：系统 Python 3.8+ 含 tkinter 时跑 **43 套 / 472 例 / 失败 0**；
+> managed/sandbox Python 若未带 tkinter（如某些便携发行版），resident_test 收集失败，**仍能跑 461 例**；
 > 任何环境变更请以 `python run_tests.py` 实际输出为准。
 
 ## 依赖

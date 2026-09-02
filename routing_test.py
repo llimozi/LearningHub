@@ -11,9 +11,11 @@ import inspect
 import json
 import os
 import shutil
+import socket
 import sys
 import tempfile
 import threading
+import time
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -89,7 +91,17 @@ def test_route_handler_lookup():
 
 
 class _HTTPServer:
-    """最小 HTTP 冒烟台: 真实服务 + 隔离 BASE/TASKS_FILE + save 打桩。"""
+    """最小 HTTP 冒烟台: 真实服务 + 隔离 BASE/TASKS_FILE + save 打桩。
+
+    D-6 flaky 修复(2026-09-02, 副本开源准备): 启动确定性。
+    原实现 start(serve_forever) 后立即返回——Windows 下偶发"连接建立但请求被
+    中止"(WinError 10053), 归因=accept 循环尚未真正就绪即收到请求, 属冷启动
+    竞态(见 BACKLOG route_contract 瞬时失败记录, 原归因 INFERRED)。
+    修复: __init__ 做「就绪握手」(等 accept 循环收到首个请求), close 做确定性
+    teardown(join serve_forever 线程 + 显式 socket.close)。不改变任何断言语义。
+    """
+
+    _READY_TIMEOUT = 3.0            # 就绪握手上限(秒), 超时即确定性失败而非静默放行
 
     def __init__(self):
         self._tmp = tempfile.mkdtemp()
@@ -101,11 +113,44 @@ class _HTTPServer:
         app_data.save_tasks = lambda st: None           # 打桩: 绝不写真实数据
         self.srv = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.port = self.srv.server_address[1]
-        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self._thread = threading.Thread(target=self.srv.serve_forever, daemon=True)
+        self._thread.start()
+        self._wait_ready()
+
+    def _wait_ready(self):
+        """就绪握手: 反复做一次最小 HTTP 往返, 直到服务端真正响应。
+        仅证明 accept+dispatch 全链路就绪, 不依赖任何业务状态(404 也算就绪)。
+        超时抛错: 让测试确定性失败, 而非把竞态留给后续用例偶发。"""
+        deadline = time.monotonic() + self._READY_TIMEOUT
+        last_err = None
+        while time.monotonic() < deadline:
+            try:
+                conn = socket.create_connection(("127.0.0.1", self.port), timeout=0.5)
+                try:
+                    conn.sendall(b"GET /api/state HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+                                 b"Connection: close\r\n\r\n")
+                    # 读到任意 HTTP 状态行即视为就绪
+                    data = conn.recv(128)
+                    if data and data[:1] in (b"H", b"h"):
+                        return
+                finally:
+                    conn.close()
+            except OSError as e:
+                last_err = e
+                time.sleep(0.02)
+        raise RuntimeError("HTTP 冒烟台 3s 内未就绪: %s" % (last_err,))
 
     def close(self):
-        self.srv.shutdown()
-        self.srv.server_close()
+        try:
+            self.srv.shutdown()
+        finally:
+            try:
+                self.srv.socket.close()          # 显式关监听 socket, 释放端口
+            except OSError:
+                pass
+            self.srv.server_close()              # ThreadingMixIn: join 全部请求线程
+            if self._thread.is_alive():
+                self._thread.join(timeout=2.0)   # 确定性收尾: 等 serve_forever 退出
         app_config.BASE = self._old_base
         app_config.TASKS_FILE = self._old_tf
         app_data.save_tasks = self._old_save
