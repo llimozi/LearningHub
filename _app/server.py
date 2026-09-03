@@ -210,7 +210,15 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"cards": analyzer.get_review_cards(config.BASE)})
 
     def _get_graph(self):
-        self._json(graph.build_graph(config.BASE))
+        g = graph.build_graph(config.BASE)
+        # Phase B2(2026-09-03): 附加语义关系缓存(可空)——前端可据此把边从「共现」升级为
+        # 「上位/下位/相关/前置」描线; 无 Key/未判定时为 {} , 行为与旧版一致(纯共现)。
+        try:
+            rels = graph.load_semantic_rels(config.BASE)
+            g["semantic_rels"] = rels if rels else {}
+        except Exception:
+            g["semantic_rels"] = {}
+        self._json(g)
 
     def _get_analytics(self):
         self._json(api.api_analytics())

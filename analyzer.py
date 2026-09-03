@@ -304,3 +304,88 @@ def get_review_cards(learning_dir, today=None):
                       "source_file": dss[-1] + ".md", "count": len(dss)})
     cards.sort(key=lambda x: (x["status"] != "需复习", x["source_date"]))
     return cards
+
+
+# ---- v1.1 Phase B 语义纵深(可选 LLM, 复用 _call_deepseek + 熔断基建) ----
+# 铁律: 零反斜杠(换行一律 chr(10)); 无 Key / 熔断时完整回退, 零二次调用。
+
+
+def llm_weekly_insight(summary_payload, key=None):
+    """基于本周真实聚合(概念摘要/复习趋势/掌握分)生成「本周洞察」(薄弱概念、趋势点评, <=150 字)。
+
+    复用 analyzer 的 _call_deepseek + _LLM_DISABLED 熔断基建, 与 services.weekly_report 共用一套降级策略,
+    避免各模块自建 DeepSeek 调用(2026-09-03 用户盯防项)。
+
+    返回: 洞察文本(str, 已截断到 150 字) 或 None(无 Key / 熔断 / 调用失败 / 解析失败)。
+    调用失败时置位 _LLM_DISABLED, 本进程后续零调用。
+    """
+    global _LLM_DISABLED
+    key = key if key is not None else os.environ.get("DEEPSEEK_API_KEY", "")
+    if not key or _LLM_DISABLED:
+        return None
+    prompt = ("你是严谨的学习复盘助手。基于给定的本周真实数据, 用一句话点出" + chr(10)
+              + "1) 最该优先补的概念(1 到 2 个, 给理由)" + chr(10)
+              + "2) 本周趋势点评(完成率/复习表现)" + chr(10)
+              + "要求: 只基于给定数据, 禁止编造; 中文; 不超过 150 字; 不要分点符号以外的多余内容。"
+              + chr(10) + '输出纯 JSON: {"insight": "..."}, 不要多余文字。' + chr(10)
+              + "真实数据:" + chr(10)
+              + json.dumps(summary_payload, ensure_ascii=False)[:_LLM_MAX_BODY])
+    try:
+        text = _call_deepseek(prompt, key)
+        obj = _extract_json(text)
+        if not isinstance(obj, dict):
+            _LLM_DISABLED = True
+            return None
+        insight = str(obj.get("insight") or "").strip()
+        if not insight:
+            _LLM_DISABLED = True
+            return None
+        return insight[:150]
+    except Exception:
+        _LLM_DISABLED = True                                 # 熔断: 后续零二次调用
+        return None
+
+
+def llm_concept_relations(pairs, key=None, batch_limit=10):
+    """判定概念对的语义关系(上位 / 下位 / 相关 / 前置), 用于把知识图谱从「共现」升级为「语义结构」。
+
+    pairs: [{"a": ..., "b": ...}, ...]; 每批最多 batch_limit 对(默认 10), 超出部分本批不处理(调用方分批)。
+    复用 _call_deepseek + 熔断; 无 Key / 熔断 / 失败 -> 返回 None(调用方回退共现), 零二次调用。
+    返回: {"rels": [{"a":..., "b":..., "type":...}, ...]} 或 None。
+    """
+    global _LLM_DISABLED
+    key = key if key is not None else os.environ.get("DEEPSEEK_API_KEY", "")
+    if not key or _LLM_DISABLED or not pairs:
+        return None
+    batch = [p for p in pairs if p.get("a") and p.get("b")][:batch_limit]
+    if not batch:
+        return None
+    prompt = ("你是知识结构分析师。判定下列概念对之间的语义关系, 每对只能选一种类型:" + chr(10)
+              + "上位(a 是 b 的上位概念) / 下位(a 是 b 的下位概念) / 相关(同层关联) / 前置(学 a 是学 b 的前提)。"
+              + chr(10) + "要求: 只基于常识与给定概念名, 禁止编造额外概念; 无法判定时填 相关。" + chr(10)
+              + '输出纯 JSON: {"rels": [{"a": "...", "b": "...", "type": "..."}]}, 不要多余文字。' + chr(10)
+              + "概念对:" + chr(10) + json.dumps(batch, ensure_ascii=False)[:_LLM_MAX_BODY])
+    try:
+        text = _call_deepseek(prompt, key)
+        obj = _extract_json(text)
+        if not isinstance(obj, dict) or not isinstance(obj.get("rels"), list):
+            _LLM_DISABLED = True
+            return None
+        ok_types = ("上位", "下位", "相关", "前置")
+        rels = []
+        for r in obj["rels"]:
+            if not isinstance(r, dict):
+                continue
+            t = str(r.get("type") or "").strip()
+            if t not in ok_types:
+                t = "相关"
+            rels.append({"a": str(r.get("a") or "").strip().lower(),
+                         "b": str(r.get("b") or "").strip().lower(),
+                         "type": t})
+        if not rels:
+            _LLM_DISABLED = True
+            return None
+        return {"rels": rels}
+    except Exception:
+        _LLM_DISABLED = True
+        return None

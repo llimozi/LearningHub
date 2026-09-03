@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""forgetting_test.py —— 遗忘曲线引擎单元测试 (v1.1 · 纯标准库)
+"""forgetting_test.py —— 遗忘曲线引擎单元测试 (v2.0 · 纯标准库)
 跑法A: pytest forgetting_test.py     跑法B: python forgetting_test.py (零依赖runner)
 覆盖: 从台账同步知识点档案(幂等/source_date推进/旧档不回退) /
       艾宾浩斯间隔表 1-2-4-7-15-30 与 ease 缩放 / 打分复习与 ease 钳制 /
       到期队列排序(越危险越靠前) / 记忆衰减百分比单调性。全部临时目录+固定日期。
+v2.0 新增(Phase A1/A2): FSRS 双参数调度——
+      FSRS 间隔反解(手推对照) / 双曲幂律保持率 / 复习驱动 S/D 更新与钳制 /
+      未复习概念保持 v1 语义 / 旧 v1 记录(无 S/D)读取回退 + 首复自动升级。
 """
 import datetime
 import json
@@ -11,9 +14,13 @@ import os
 import shutil
 import tempfile
 
-from forgetting import (INTERVALS, load_knowledge, save_knowledge,
+from forgetting import (INTERVALS, P_TARGET, DECAY_DEFAULT, GROWTH,
+                        S_MIN, S_MAX, D_MIN, D_MAX, S0_START,
+                        load_knowledge, save_knowledge,
                         sync_from_analysis, interval_days, due_cards,
-                        mark_reviewed, retention_percent, decay_rows)
+                        mark_reviewed, retention_percent, decay_rows,
+                        _fsrs_interval, _fsrs_retention, _has_sd,
+                        _review_pairs, calibrate_decay)
 
 TODAY = datetime.date(2099, 7, 10)
 
@@ -233,6 +240,223 @@ def test_save_roundtrip():
         data = {"version": 1, "knowledge": {"k": {"first_seen": "2099-07-01"}}}
         save_knowledge(d, data)
         assert _read(os.path.join(d, "daily", "knowledge.json")) == data
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+# ---------------- v2.0 FSRS 双参数调度 (Phase A1/A2) ----------------
+def test_fsrs_interval_handcalc():
+    """间隔反解手推对照: interval = S×((1/0.9)^(1/0.09) − 1) ≈ S×2.2242
+    验收基准(豆包手推同式): S=5→11, S=30→67, S=100→222。"""
+    for s, expect in ((5, 11), (30, 67), (100, 222)):
+        rec = {"stability": s, "difficulty": 0.3, "review_count": 5,
+               "last_review_ts": "2099-01-01T00:00:00"}
+        assert interval_days(rec) == expect, (s, interval_days(rec))
+
+
+def test_fsrs_interval_monotone_and_floor():
+    """S 单调不减; 下限 1 天。"""
+    prev = 0
+    for s in range(1, 500):
+        rec = {"stability": s, "review_count": 3,
+               "last_review_ts": "2099-01-01T00:00:00"}
+        i = interval_days(rec)
+        assert i >= prev, (s, i, prev)
+        assert i >= 1
+        prev = i
+    assert interval_days({"stability": 0.001, "review_count": 3,
+                          "last_review_ts": "2099-01-01T00:00:00"}) >= 1
+
+
+def test_fsrs_retention_shape():
+    """幂律保持率: gap=0 -> 100%; gap 越大越低; S 越大越抗遗忘。"""
+    r0 = {"stability": 10.0, "last_review_ts": "2099-07-10T00:00:00"}
+    assert retention_percent(r0, today=datetime.date(2099, 7, 10)) == 100
+    r5 = retention_percent(r0, today=datetime.date(2099, 7, 15))
+    r30 = retention_percent(r0, today=datetime.date(2099, 8, 9))
+    assert r30 < r5 < 100, (r5, r30)
+    small = {"stability": 2.0, "last_review_ts": "2099-07-10T00:00:00"}
+    assert retention_percent(small, today=datetime.date(2099, 7, 15)) < r5
+
+
+def test_mark_reviewed_drives_sd_both_directions():
+    """答对拉长 S/略降 D; 答错砍半 S/抬 D。"""
+    d = _dir_with_notes({"2099-07-01": _note("A", ["c"])})
+    try:
+        sync_from_analysis(d, today=TODAY)
+        mark_reviewed(d, "c", now=datetime.datetime(2099, 7, 2, 9, 0), quality=5)
+        good = load_knowledge(d)["knowledge"]["c"]
+        assert good["stability"] == round(S0_START * GROWTH[5], 2), good
+        d0 = good["difficulty"]
+        mark_reviewed(d, "c", now=datetime.datetime(2099, 7, 3, 9, 0), quality=1)
+        bad = load_knowledge(d)["knowledge"]["c"]
+        assert bad["stability"] < good["stability"], (good, bad)
+        assert bad["difficulty"] > d0, (d0, bad)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_sd_clamped_on_extremes():
+    """S 钳 [1,3650], D 钳 [0.1,0.95]。"""
+    d = _dir_with_notes({"2099-07-01": _note("A", ["hi", "lo"])})
+    try:
+        sync_from_analysis(d, today=TODAY)
+        for _ in range(40):
+            mark_reviewed(d, "hi", quality=5,
+                          now=datetime.datetime(2099, 7, 5, 8, 0))
+            mark_reviewed(d, "lo", quality=0,
+                          now=datetime.datetime(2099, 7, 5, 8, 0))
+        kn = load_knowledge(d)["knowledge"]
+        assert kn["hi"]["stability"] <= S_MAX
+        assert kn["hi"]["difficulty"] >= D_MIN
+        assert kn["lo"]["difficulty"] <= D_MAX
+        assert kn["lo"]["stability"] >= S_MIN
+        assert _has_sd(kn["hi"]) and _has_sd(kn["lo"])
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_v1_record_reads_back_unaffected():
+    """旧 v1 数据(无 S/D): 读取/间隔/保持率与升级前完全一致(档位表+指数曲线)。"""
+    d = tempfile.mkdtemp()
+    try:
+        old = {"version": 1, "knowledge": {
+            "k1": {"first_seen": "2099-07-01", "source_date": "2099-07-01",
+                   "last_review_ts": "2099-07-05T09:00:00",
+                   "review_count": 1, "ease_factor": 2.5}},
+            "review_log": []}
+        _write(os.path.join(d, "daily", "knowledge.json"), old)
+        rec = load_knowledge(d)["knowledge"]["k1"]
+        assert not _has_sd(rec)
+        assert interval_days(rec) == 2                    # v1 count=1 档位
+        # v1 指数曲线: R=exp(-gap/稳定度), 距5天 -> exp(-5/3.2)≈21%
+        r = retention_percent(rec, today=datetime.date(2099, 7, 10))
+        assert 18 <= r <= 24, r
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_v1_record_upgrades_on_first_review():
+    """旧 v1 记录首次复习自动初始化 S/D 并升级 version=2, 行为转 FSRS。"""
+    d = tempfile.mkdtemp()
+    try:
+        old = {"version": 1, "knowledge": {
+            "k1": {"first_seen": "2099-07-01", "source_date": "2099-07-01",
+                   "last_review_ts": "2099-07-05T09:00:00",
+                   "review_count": 1, "ease_factor": 2.5}},
+            "review_log": []}
+        _write(os.path.join(d, "daily", "knowledge.json"), old)
+        mark_reviewed(d, "k1", now=datetime.datetime(2099, 7, 10, 9, 0), quality=4)
+        data = load_knowledge(d)
+        rec = data["knowledge"]["k1"]
+        assert data["version"] == 2
+        assert _has_sd(rec)
+        # S0 = v1 有效间隔 2 天(有复习史) -> q=4 ×2.0 -> 4.0
+        assert rec["stability"] == 4.0, rec
+        assert rec["difficulty"] == round(0.3 * 0.95, 2) == 0.28
+        assert interval_days(rec) == _fsrs_interval(rec)  # 已转 FSRS
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_unreviewed_concept_keeps_v1_semantics():
+    """未复习概念(有 stability 起步值但无 last_review_ts): interval/保持率
+    保持 v1 语义(首档 1 天 + 指数曲线)——升级只影响复习过的轨迹。"""
+    d = _dir_with_notes({"2099-07-01": _note("A", ["新概念"])})
+    try:
+        sync_from_analysis(d, today=TODAY)
+        rec = load_knowledge(d)["knowledge"]["新概念"]
+        assert rec["stability"] == S0_START            # v2 起步值已建档
+        assert not rec.get("last_review_ts")
+        assert interval_days(rec) == INTERVALS[0]      # 未复习 -> 首档 1 天
+        # 距首见 25 天 -> v1 指数曲线衰减到 ~0%
+        r = retention_percent(rec, today=datetime.date(2099, 7, 26))
+        assert r <= 5, r
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_quality_edge_values():
+    """quality 边界: 0 与 5 均被正确接受且钳制; 非法值(如 9/-1)不炸。"""
+    d = _dir_with_notes({"2099-07-01": _note("A", ["e"])})
+    try:
+        sync_from_analysis(d, today=TODAY)
+        assert mark_reviewed(d, "e", quality=0,
+                             now=datetime.datetime(2099, 7, 2, 8, 0)) is True
+        assert mark_reviewed(d, "e", quality=5,
+                             now=datetime.datetime(2099, 7, 3, 8, 0)) is True
+        assert mark_reviewed(d, "e", quality=9,       # 越界 -> 钳到 5
+                             now=datetime.datetime(2099, 7, 4, 8, 0)) is True
+        assert mark_reviewed(d, "e", quality=-3,      # 越界 -> 钳到 0
+                             now=datetime.datetime(2099, 7, 5, 8, 0)) is True
+        rec = load_knowledge(d)["knowledge"]["e"]
+        assert S_MIN <= rec["stability"] <= S_MAX
+        assert D_MIN <= rec["difficulty"] <= D_MAX
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+# ---------------- v2.0 真实校准 (Phase A3) ----------------
+def test_calibrate_returns_default_when_insufficient():
+    """复习样本 < 30 或 log 为空 -> 静默返回默认 DECAY, 不强行拟合。"""
+    d = _dir_with_notes({"2099-07-01": _note("A", ["c1"])})
+    try:
+        sync_from_analysis(d, today=TODAY)
+        # 空 review_log
+        assert calibrate_decay(d) == DECAY_DEFAULT
+        # 少量(2 条)仍不足
+        mark_reviewed(d, "c1", now=datetime.datetime(2099, 7, 2, 8, 0))
+        mark_reviewed(d, "c1", now=datetime.datetime(2099, 7, 5, 8, 0))
+        assert calibrate_decay(d) == DECAY_DEFAULT
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_calibrate_sufficient_data_in_range():
+    """充足配对复习样本 -> 输出有值且 ∈ [DECAY_MIN, DECAY_MAX]。"""
+    d = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(d, "daily"), exist_ok=True)
+        log = []
+        kn = {}
+        for ci in range(8):
+            c = "concept%d" % ci
+            kn[c] = {"first_seen": "2099-01-01", "source_date": "2099-01-01",
+                     "last_review_ts": "2099-02-01T09:00:00", "review_count": 7,
+                     "ease_factor": 2.5, "stability": 10.0, "difficulty": 0.3}
+            base = datetime.datetime(2099, 1, 1, 9, 0)
+            for r in range(7):
+                ts = (base + datetime.timedelta(days=5 * (r + 1))).isoformat(timespec="seconds")
+                log.append({"ts": ts, "concept": c, "quality": 4})
+        save_knowledge(d, {"version": 2, "knowledge": kn, "review_log": log})
+        samples = _review_pairs(d)
+        assert len(samples) >= 30, len(samples)
+        out = calibrate_decay(d)
+        assert out is not None
+        assert 0.05 <= out <= 0.50, out
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_calibrate_silent_on_broken_data():
+    """损坏数据(非 dict log) -> 静默返回默认, 不抛。"""
+    d = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(d, "daily"), exist_ok=True)
+        save_knowledge(d, {"version": 2, "knowledge": {}, "review_log": "损坏"})
+        assert calibrate_decay(d) == DECAY_DEFAULT
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+def test_ensure_reports_hook_runs_calibration_without_breaking():
+    """reportio.ensure_reports 挂载校准: 正常生成报告且不抛错(每周低频钩子)。"""
+    import reportio
+    d = tempfile.mkdtemp()
+    try:
+        os.makedirs(os.path.join(d, "daily"), exist_ok=True)
+        r = reportio.ensure_reports(d, today=TODAY)
+        assert isinstance(r, dict) and "created" in r          # 报告流程未破坏
     finally:
         shutil.rmtree(d, ignore_errors=True)
 

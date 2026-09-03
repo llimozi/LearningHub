@@ -272,6 +272,17 @@ def ensure_reports(learning_dir, today=None):
     if mname not in existing:
         monthly, _svg = save_monthly(learning_dir, today=t)
         created.append(os.path.basename(monthly))
+    # Phase A3: 每周一次的真实遗忘曲线校准(低频, 失败静默)——写回 knowledge.json 顶层 decay。
+    try:
+        import forgetting
+        decay = forgetting.calibrate_decay(learning_dir)
+        if decay is not None:
+            kdata = forgetting.load_knowledge(learning_dir)
+            if kdata.get("decay") != decay:
+                kdata["decay"] = decay
+                forgetting.save_knowledge(learning_dir, kdata)
+    except Exception:
+        pass                                           # 校准失败静默降级, 不影响报告生成
     return {"created": created, "weekly": weekly, "monthly": monthly}
 
 

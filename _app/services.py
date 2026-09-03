@@ -595,24 +595,65 @@ def weekly_report(state, learning_dir):
           + ("- 疲劳状态：🔥 疲劳中（%s）→ 任务上限受 cap 约束，只保 P1，先恢复节奏\n" % fat.get("reason", "") if fat.get("active") else "- 疲劳状态：✅ 正常\n")
           + "- 完成率趋势：%s（斜率 %+.3f）→ 建议%s任务量\n" % (trend, tm["slope"], "适度增加" if tm["slope"] > 0.02 else ("酌情减负" if tm["slope"] < -0.02 else "维持当前"))
           + "- 引擎预测明日建议量：**%d 条**\n" % tm["predicted"])
+    # ---- Phase B1 素材: 概念摘要聚合 + 本周复习/掌握趋势(失败静默降级为空, 不影响主流程) ----
+    concept_summaries, review_trend = [], []
+    try:
+        import forgetting as _fg
+        kdata = _fg.load_knowledge(learning_dir)
+        kn = kdata.get("knowledge") or {}
+        for c, rec in sorted(kn.items()):
+            if not c or not isinstance(rec, dict):
+                continue
+            row = {"concept": str(c)[:40],
+                   "review_count": int(rec.get("review_count", 0) or 0),
+                   "stability": rec.get("stability"),
+                   "difficulty": rec.get("difficulty")}
+            # analyzer 的 summary(笔记提炼的一句话摘要)并入
+            try:
+                import analyzer as _az
+                an = _az.load_analysis(learning_dir)
+                for ds in sorted((an.get("notes") or {}).keys()):
+                    nrec = an["notes"][ds]
+                    if c in (nrec.get("concepts") or []):
+                        s = str(nrec.get("summary") or "").strip()
+                        if s:
+                            row["summary"] = s[:80]
+                            break
+            except Exception:
+                pass
+            concept_summaries.append(row)
+        # 本周复习趋势: 由 review_log 近 7 天事件统计
+        recent = 0
+        for e in (kdata.get("review_log") or []):
+            if isinstance(e, dict) and e.get("ts"):
+                try:
+                    ts_day = datetime.datetime.fromisoformat(str(e["ts"])[:19]).date()
+                    if (today - ts_day).days <= 7:
+                        recent += 1
+                except Exception:
+                    pass
+        review_trend = {"last7_reviews": recent,
+                        "mastery_low_count": sum(
+                            1 for r in kn.values() if isinstance(r, dict)
+                            and (r.get("mastery_score") is not None)
+                            and r.get("mastery_score", 0) < 40)}
+    except Exception:
+        concept_summaries, review_trend = [], []
     key = os.environ.get("DEEPSEEK_API_KEY", "")
     if not key:
         return {"ok": True, "source": "template", "markdown": md}
+    # ---- Phase B1(2026-09-03): 复用 analyzer 的 _call_deepseek + _LLM_DISABLED 熔断基建,
+    # 不再自建 urllib 调用(原自建分支为重复建设, 已收敛到 analyzer 单一出口) ----
     try:
-        body = json.dumps({
-            "model": "deepseek-chat",
-            "messages": [
-                {"role": "system", "content": "你是学习复盘助手。基于用户给定的真实数据(JSON)润色一版精炼中文周报，保持三节结构。禁止编造数据之外的任何事实。"},
-                {"role": "user", "content": "真实数据：\n" + json.dumps({"stats": stats, "hist7": hist7, "fatigue": fat, "predict": tm, "note_titles": titles, "keywords": kws}, ensure_ascii=False) + "\n\n草稿周报：\n" + md},
-            ],
-            "temperature": 0.3,
-        }).encode("utf-8")
-        req = urllib.request.Request("https://api.deepseek.com/chat/completions", data=body,
-                                     headers={"Content-Type": "application/json", "Authorization": "Bearer " + key})
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        text = data["choices"][0]["message"]["content"]
-        return {"ok": True, "source": "deepseek", "markdown": text}
+        import analyzer
+        payload = {"stats": stats, "hist7": hist7, "fatigue": fat, "predict": tm,
+                   "note_titles": titles, "keywords": kws,
+                   "concept_summaries": concept_summaries, "review_trend": review_trend}
+        insight = analyzer.llm_weekly_insight(payload, key)
+        if insight:
+            md = md + "\n\n## 四、本周洞察（AI）\n\n- " + insight + "\n"
+            return {"ok": True, "source": "deepseek", "markdown": md}
+        return {"ok": True, "source": "template", "markdown": md}   # 无 Key / 熔断 / 失败: 完整回退
     except Exception as e:
         logging.error("Boundary error in weekly_report: %s", e, exc_info=True)
         return {"ok": True, "source": "template",
