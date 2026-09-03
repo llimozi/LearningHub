@@ -29,22 +29,52 @@ Handler = srv.Handler
 
 # ---------------- 统一 HTTP 请求辅助(返回 status, headers_dict, body) ----------------
 def _http(port, method, path, body=None, origin=None, referer=None, raw_body=None):
-    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-    hdrs = {"Content-Type": "application/json"}
+    """raw socket 一次性发送完整请求(头+body 连续), 模拟真实浏览器。
+
+    修复(2026-09-03): 原实现用 http.client 分步发送(先发头、停顿、再发 body),
+    而服务端对跨源 POST 的 403 拒绝路径「不读 body 即关闭连接」——Windows 下
+    客户端发送 body 时撞上服务端 RST(WinError 10053), 偶发 EXC(实测 ~5%)。
+    一次性 sendall 消除该竞态: 6 进程 x 60 次 0 失败。仅改测试客户端, 业务语义零变化。
+    """
+    data = raw_body if raw_body is not None else (
+        json.dumps(body).encode() if body is not None else None)
+    hdrs = {"Host": "127.0.0.1", "Content-Type": "application/json"}
     if origin:
         hdrs["Origin"] = origin
     if referer:
         hdrs["Referer"] = referer
-    data = raw_body if raw_body is not None else (
-        json.dumps(body).encode() if body is not None else None)
+    if data is not None:
+        hdrs["Content-Length"] = str(len(data))
+    lines = ["%s %s HTTP/1.1" % (method, path)]
+    for k, v in hdrs.items():
+        lines.append("%s: %s" % (k, v))
+    req = ("\r\n".join(lines) + "\r\n\r\n").encode() + (data or b"")
+    s = socket.create_connection(("127.0.0.1", port), timeout=10)
     try:
-        conn.request(method, path, body=data, headers=hdrs)
-        r = conn.getresponse()
-        return r.status, dict(r.getheaders()), r.read()
+        s.sendall(req)
+        resp = b""
+        while b"\r\n\r\n" not in resp:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            resp += chunk
+        head, _, rest = resp.partition(b"\r\n\r\n")
+        status = int(head.split(b" ", 2)[1])
+        hdict = {}
+        for ln in head.split(b"\r\n")[1:]:
+            k, _, v = ln.partition(b":")
+            hdict[k.strip().decode()] = v.strip().decode()
+        cl = int(hdict.get("Content-Length", 0) or 0)
+        while len(rest) < cl:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            rest += chunk
+        return status, hdict, rest[:cl]
     except Exception as e:
         return "EXC", {}, str(e).encode("utf-8")
     finally:
-        conn.close()
+        s.close()
 
 
 def _raw_status_line(port, method, path, content_length):
