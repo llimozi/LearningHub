@@ -1,6 +1,16 @@
 ﻿# LearningHub 变更日志
 
-> 更新于 2026-09-01 · UI 冻结（v1.12）· 终审记录 `refactor_phase2/54_ui_e_final_audit_and_content_hygiene_report.md`
+> 更新于 2026-09-03 · 自进化语义一步（v1.13）· analyzer LLM 语义提炼 + route 竞态根治
+
+---
+
+## 【v1.13 · 自进化语义一步 + route 竞态根治（Analyzer LLM & Test Stability）】
+
+- **自进化语义一步（analyzer.py v1.0）** — 概念提炼从「纯词频 top-5」升级为「可选 LLM 语义提炼（3~5 个真核心概念 + 一句话摘要）」，保持**核心零依赖 + AI 可选**：无 Key 时结构与 v0.9 完全一致（纯词频回退）；有 Key 时经 `_call_deepseek`（urllib 直调 deepseek-chat，JSON 模式，temperature 0.2）提炼语义概念并附 `summary` 键。进程级熔断 `_LLM_DISABLED`：任何一次调用失败即熔断回退词频、后续零调用（与 services.weekly_report 同款降级策略）。全系统「理解层」（复习卡、recommender 的 reinforce/review/explore、graph、概念检索索引）自动吃到新 concepts。
+- **analyzer_llm_test.py（新增 7 例）** — 全部 mock 注入不触真实 API：无 Key 保持词频 / LLM 成功替换+摘要 / 失败回退+熔断置位 / 坏 JSON 回退 / 熔断后零二次调用 / JSON 容错提取 / 噪音过滤；`_reset_fuse()` 每例复位熔断态。
+- **route 竞态根治（route_contract_test.py）** — 根因实证：`http.client` 分步发送（先发头、停顿、再发 body），而服务端对跨源 POST 的 403 拒绝路径「不读 body 即关闭连接」，Windows 下客户端发送 body 撞服务端 RST（WinError 10053），偶发 EXC（修复前基线：route 单跑 9 次 1 失败 ≈11%）。修复：测试客户端改 raw socket **一次性发送完整请求**（模拟真实浏览器连续发送），业务语义零变化；验证 6 进程×60 次 0 失败 + route 单跑 6/6 全绿 + 整套 44 套全绿。
+- **routing_test.py 服务端就绪握手** — `_wait_ready` 起服务后循环最小请求至真实响应（3s 超时确定性报错）+ close 显式 socket.close + join serve_forever 线程，消除 Windows 冷启动竞态。
+- **终验**：业务测试 **44 套 / 479 例 / 0 失败**（anaconda3 基线运行时）；route_contract_test 单跑 6/6 全绿。
 
 ---
 

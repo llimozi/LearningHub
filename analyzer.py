@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
-"""analyzer.py —— 笔记语义分析与智能复习提醒 (v0.9 · 零反斜杠实现)
+"""analyzer.py —— 笔记语义分析与智能复习提醒 (v1.0 · 零反斜杠实现 + 可选 LLM 语义增强)
 
 设计说明: 本模块刻意不使用任何反斜杠字符(转义层级不可控),
 正则一律用 显式字符区间([0-9]/[一-鿿]) 与 re.escape() 组装。
 
+v1.0 语义增强(可选, 遵循「核心零依赖 + AI 可选」):
+  有 DEEPSEEK_API_KEY 时, 概念提炼从「词频 top-N」升级为「LLM 提炼真核心概念」,
+  并顺带生成一句话主题摘要(summary)。无 Key / 调用失败(熔断)时自动回退词频,
+  行为与 v0.9 完全一致。熔断为进程级: 首次失败后本进程不再尝试, 防止批量扫描雪崩。
+
 公开 API(与 v0.7 兼容):
-  analyze_note(filepath)                    -> {"date","topic","concepts","tags","code_langs"}
+  analyze_note(filepath)                    -> {"date","topic","concepts","tags","code_langs"[,"summary"]}
   update_analysis(learning_dir, dates=None) -> (data, added_dates)
   get_review_cards(learning_dir, today=None)
 """
 import os
 import re
 import json
+import urllib.request
 from collections import Counter
 from datetime import date
 
@@ -25,6 +31,13 @@ _ANALYSIS_NAME = "analysis.json"
 _STOPFILE_NAME = "stoplist.txt"
 _CODE_LANGS = {"python", "js", "javascript", "ts", "typescript", "java", "go",
                "rust", "c", "cpp", "bash", "shell", "sql", "html", "css", "json", "yaml"}
+
+# ---- v1.0 可选 LLM 语义增强 (遵循零反斜杠约定) ----
+_LLM_DISABLED = False                                   # 进程级熔断: 首次失败后本进程不再尝试
+_LLM_MAX_BODY = 3000                                    # 发往 LLM 的正文截断上限(字符)
+_LLM_TIMEOUT = 15                                       # 单次调用超时(秒)
+_LLM_API = "https://api.deepseek.com/chat/completions"
+_LLM_MODEL = "deepseek-chat"
 
 BT = chr(96)                                          # 反引号
 FENCE = BT * 3
@@ -95,7 +108,71 @@ def _tokenize(text):
     return re.findall(r"[一-鿿]{2,4}|[A-Za-z]{2,}", text)
 
 
+def _call_deepseek(prompt, key):
+    """调用 DeepSeek chat 接口, 返回 assistant 文本; 任何异常向上抛(由调用方熔断降级)"""
+    payload = json.dumps({
+        "model": _LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": "你是严谨的学习内容语义分析师, 只基于给定笔记提炼概念, 禁止编造任何笔记之外的内容。"},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 300,
+        "response_format": {"type": "json_object"},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        _LLM_API, data=payload,
+        headers={"Content-Type": "application/json",
+                 "Authorization": "Bearer " + key})
+    with urllib.request.urlopen(req, timeout=_LLM_TIMEOUT) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return data["choices"][0]["message"]["content"]
+
+
+def _extract_json(text):
+    """从模型输出中提取最外层 JSON 对象(容错 markdown 围栏/前后缀); 失败返回 None"""
+    a = str(text or "").find("{")
+    b = str(text or "").rfind("}")
+    if a < 0 or b <= a:
+        return None
+    try:
+        return json.loads(str(text)[a:b + 1])
+    except Exception:
+        return None
+
+
+def _llm_concepts(body, topic, key):
+    """LLM 提炼核心概念(3~5 个)与一句话摘要; 解析失败返回 None(调用方回退词频)"""
+    snippet = (body or "")[:_LLM_MAX_BODY]
+    prompt = ("请阅读以下学习笔记, 提炼真正核心的概念(3 到 5 个, 每个 2 到 20 字, "
+              + "中文优先、英文术语可保留), 以及一句话主题摘要(不超过 30 字)。" + chr(10)
+              + "要求: 只基于笔记内容, 禁止编造; concepts 是概念或知识点, 不是高频词或形容词。"
+              + chr(10)
+              + '输出纯 JSON: {"concepts": [...], "summary": "..."}, 不要多余文字。'
+              + chr(10) + "笔记主题: " + (topic or "")
+              + chr(10) + "笔记正文:" + chr(10) + snippet)
+    text = _call_deepseek(prompt, key)
+    obj = _extract_json(text)
+    if not isinstance(obj, dict):
+        return None
+    raw = obj.get("concepts")
+    if not isinstance(raw, list):
+        return None
+    cleaned = []
+    for c in raw:
+        s = str(c).strip()
+        if 2 <= len(s) <= 40 and s not in _BAD_WORDS:
+            cleaned.append(s)
+        if len(cleaned) >= 5:
+            break
+    if not cleaned:
+        return None
+    summary = str(obj.get("summary") or "").strip()[:_LLM_MAX_BODY]
+    return {"concepts": cleaned, "summary": summary[:60]}
+
+
 def analyze_note(filepath, learning_dir=None):
+    global _LLM_DISABLED
     ld = learning_dir or os.path.dirname(os.path.dirname(os.path.abspath(filepath)))
     stopset = _load_stopset(ld)
     with open(filepath, encoding="utf-8") as f:
@@ -135,6 +212,20 @@ def analyze_note(filepath, learning_dir=None):
 
     words = [w for w in words if not noisy(w)]
     concepts = [w for w, _ in Counter(words).most_common(5)]
+    key = os.environ.get("DEEPSEEK_API_KEY", "")
+    if key and not _LLM_DISABLED:
+        try:
+            llm = _llm_concepts(body, topic, key)
+        except Exception:
+            llm = None
+        if llm:
+            rec = {"date": date_str, "topic": topic,
+                   "concepts": llm["concepts"],
+                   "tags": tags, "code_langs": sorted(langs)}
+            if llm["summary"]:
+                rec["summary"] = llm["summary"]
+            return rec
+        _LLM_DISABLED = True                             # 熔断: 本进程不再尝试, 防批量雪崩
     return {"date": date_str, "topic": topic, "concepts": concepts,
             "tags": tags, "code_langs": sorted(langs)}
 

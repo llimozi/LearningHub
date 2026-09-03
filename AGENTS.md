@@ -11,7 +11,7 @@
 - 阶段：**第一轮工程治理已全部完成并锁定**，当前处于 **Phase 2 — Professional UI/UX + Product Experience**。
 - 第一轮治理成果（基线，不得回退）：
   - P1 技术债务全部清零
-  - 业务测试 **43 套 / 472 例 / 0 失败**（入口：`run_tests.py`；含 icon_contract_test 8 例匹配型图标契约）
+  - 业务测试 **44 套 / 479 例 / 0 失败**（入口：`run_tests.py`；含 icon_contract_test 8 例匹配型图标契约、analyzer_llm_test 7 例）
   - 视觉回归 **18 / 18 PASS**（2 页面 × 3 主题 × 3 视口，见 `VISUAL_REGRESSION.md`）
   - 三主题（Theme Architecture）稳定
   - 架构拆分、路由治理、CSS 权重治理、CSS 外链化、历史归档清理、测试产物分离均已完成
@@ -105,7 +105,7 @@ Predictable interaction、Clear feedback、High information density、Long-term 
 ## 9. 测试与视觉回归规则
 
 - 任何涉及模板、CSS、交互的改动后必须依次执行：
-  1. 业务测试：`python run_tests.py`（43 套 / 472 例，0 失败为门禁；建议用带 tkinter 的完整 Python 发行版，见 README「环境差异说明」）
+  1. 业务测试：`python run_tests.py`（44 套 / 479 例，0 失败为门禁；建议用带 tkinter 的完整 Python 发行版，见 README「环境差异说明」）
   2. 三主题切换人工检查（每主题核心页面过一遍）
   3. 视觉回归：`python visual_regression\run_visual_tests.py`（18/18 PASS 为门禁；需 playwright + Pillow 环境）
 - 任一门禁失败即视为改动不成立：先定位原因，禁止通过改测试、改 baseline、跳过用例来"变绿"。

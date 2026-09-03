@@ -199,7 +199,7 @@ STATUS.json 新增字段：`last_open_ts`（本次打开时刻；旧值快照用
 
 ```bash
 python run_tests.py                        # 一键测试: 自动发现 *_test.py, 报告落 tests_output\
-python -m pytest -q                        # 全量 472 例 (43 套; 系统 Python 3.8+ 含 tkinter)
+python -m pytest -q                        # 全量 479 例 (44 套; 系统 Python 3.8+ 含 tkinter)
 python build_dashboard.py --selftest       # rollover 三规则回归(隔离数据)
 python resident.py --smoke-exit            # 常驻壳冒烟: 全组件真跑5秒自退, ExitCode=0 为过
 python csrf_test.py                        # 本地服务 CSRF 防护回归 (v1.10)
@@ -207,14 +207,14 @@ python route_contract_test.py              # D-6-0 路由 HTTP 行为契约 (28 
 python diagnose_mark_reviewed.py           # D-6-1 mark_reviewed bug 诊断(独立, 不进主套件)
 ```
 
-> **环境差异说明**：系统 Python 3.8+ 含 tkinter 时跑 **43 套 / 472 例 / 失败 0**；
-> managed/sandbox Python 若未带 tkinter（如某些便携发行版），resident_test 收集失败，**仍能跑 461 例**；
+> **环境差异说明**：系统 Python 3.8+ 含 tkinter 时跑 **44 套 / 479 例 / 失败 0**；
+> managed/sandbox Python 若未带 tkinter（如某些便携发行版），resident_test 收集失败，**仍能跑 468 例**；
 > 任何环境变更请以 `python run_tests.py` 实际输出为准。
 
 ## 依赖
 
 - **核心运行**：Python 3.8+ **标准库即可跑通全部功能**（🔒 Runtime: Python stdlib only，零第三方运行时依赖）
-- **可选增强①（AI 周报润色）**：设置环境变量 `DEEPSEEK_API_KEY` 后启用 DeepSeek API；**未配置 Key 自动降级本地模板**，功能不缺（🤖 AI Enhancement: optional）
+- **可选增强①（AI 语义提炼 + 周报润色）**：设置环境变量 `DEEPSEEK_API_KEY` 后启用 DeepSeek API——概念提炼升级为 LLM 语义提炼（真核心概念 + 一句话摘要），周报文案自动润色；**未配置 Key 自动降级本地词频/模板**，功能不缺（🤖 AI Enhancement: optional）
 - **可选增强②（中文分词）**：`pip install jieba`（更准；未装时 analyzer 自动回退 n-gram 词频，功能不缺）
 - 国内网络建议加镜像：`-i https://pypi.tuna.tsinghua.edu.cn/simple`
 - pytest 仅测试需要：`pip install pytest`（或直接跑 `python planner_test.py`）
