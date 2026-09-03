@@ -1,5 +1,7 @@
 # LearningHub · 学习仪表盘 —— 自进化学习系统的桌面常驻 APP
 
+<p align="center"><img src="assets/learninghub_banner.jpg" width="900" alt="LearningHub 学习仪表盘"></p>
+
 🔒 **Runtime: Python stdlib only** · 🤖 **AI Enhancement: optional**（DeepSeek API，无 Key 自动降级）
 
 > 一句话：把学习档案（ROADMAP/PROFILE/daily）和任务数据（tasks.json）变成一个可交互的本地仪表盘——勾选实时写回、日切自动顺延、疲劳检测、优先级分流、明日量预测；桌面常驻：托盘图标、开机自启、本地提醒、全局热键；数据闭环：自动备份、导入导出、遗忘曲线复习、周报月报；体验打磨：三主题即时换肤、Ctrl+K 全文搜索、键盘流与拖拽批量。**核心运行零第三方依赖**；仅 AI 周报润色为**可选增强**（需自备 DeepSeek API Key，未配置时自动降级为本地模板）。
